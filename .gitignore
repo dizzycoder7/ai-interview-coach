@@ -1,0 +1,39 @@
+# Environments & Dependencies
+node_modules/
+venv/
+.venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+*.pt
+*.onnx
+
+# Build Outputs
+dist/
+build/
+target/
+*.jar
+*.war
+
+# IDE & Editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment Variables & Secrets
+.env
+.env.local
+.env.*.local
+*.log
+
+# Recordings & Media
+*.webm
+*.mp4
+*.wav
+*.mp3
+
+# OS generated
+.DS_Store
+Thumbs.db

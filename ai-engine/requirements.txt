@@ -1,0 +1,40 @@
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.6
+python-multipart>=0.0.9
+httpx>=0.27.2
+pydantic>=2.9.2
+pydantic-settings>=2.5.2
+
+# AI / LLM
+google-generativeai>=0.8.1
+openai>=1.51.0
+# huggingface
+transformers>=4.45.1
+torch>=2.4.0
+sentencepiece>=0.2.0
+
+# Speech-to-Text
+openai-whisper>=20240930
+
+# Emotion / Vision
+deepface>=0.0.93
+mediapipe>=0.10.14
+opencv-python-headless>=4.10.0.84
+Pillow>=10.4.0
+
+# Storage
+boto3>=1.35.28           # AWS S3
+google-cloud-storage>=2.18.2  # GCS
+
+# DB (optional direct access from AI engine)
+pymysql>=1.1.1
+sqlalchemy>=2.0.35
+
+# Utils
+python-jose>=3.3.0
+passlib>=1.7.4
+python-dotenv>=1.0.1
+numpy>=1.26.0
+pypdf>=4.0.0
+python-docx>=1.1.0
+
