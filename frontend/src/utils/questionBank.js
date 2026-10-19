@@ -357,3 +357,74 @@ export function getAdaptiveNextQuestion({
     tips: pick.tips,
   };
 }
+
+/**
+ * AI Interviewer Personas (Modeled after Final Round AI panel styles)
+ */
+export const INTERVIEWER_PERSONAS = [
+  {
+    id: 'STRICT_CAMPUS',
+    name: 'Strict IT Campus Panelist',
+    company: 'TCS · Infosys · Accenture · Wipro',
+    tone: 'Focuses on core Java/OOP/DBMS fundamentals, precise definitions, and penalizes vague buzzwords.',
+    badge: '👔 Strict IT Panelist',
+    accentColor: '#0284c7',
+  },
+  {
+    id: 'FAANG_BAR_RAISER',
+    name: 'FAANG Bar Raiser',
+    company: 'Amazon · Google · Microsoft style',
+    tone: 'Drills deep into quantifiable metrics, personal code contribution ("I" vs "we"), and concurrency/edge-cases.',
+    badge: '⚡ FAANG Bar Raiser',
+    accentColor: '#7c3aed',
+  },
+  {
+    id: 'SUPPORTIVE_MENTOR',
+    name: 'Supportive Placement Mentor',
+    company: 'Campus Career Coach style',
+    tone: 'Encouraging and constructive; acknowledges correct points first before gently probing for missing specifics.',
+    badge: '🌱 Placement Mentor',
+    accentColor: '#059669',
+  },
+];
+
+export function getPersonaById(id) {
+  return INTERVIEWER_PERSONAS.find((p) => p.id === id) || INTERVIEWER_PERSONAS[0];
+}
+
+/**
+ * Human-friendly badge descriptors for active probing types
+ */
+export const PROBE_TYPE_META = {
+  PROBE_METRIC: {
+    label: 'Probing Metrics & Scale',
+    icon: '📊',
+    color: '#0284c7',
+    description: 'The interviewer wants quantifiable numbers, latency, user counts, or data volumes.',
+  },
+  PROBE_OWNERSHIP: {
+    label: 'Probing Individual Ownership',
+    icon: '🎯',
+    color: '#7c3aed',
+    description: 'The interviewer is verifying what YOU personally designed and coded vs your teammates.',
+  },
+  PROBE_MECHANICS: {
+    label: 'Probing Technical Mechanics',
+    icon: '⚙️',
+    color: '#d97706',
+    description: 'The interviewer is asking how this behaves under the hood (memory, data structures, or queries).',
+  },
+  PROBE_EDGE_CASE: {
+    label: 'Stress-Testing Edge Cases',
+    icon: '⚡',
+    color: '#dc2626',
+    description: 'The interviewer wants to know how your solution handles nulls, failures, concurrency, or scale.',
+  },
+  ADVANCE_TOPIC: {
+    label: 'Core Competency Checked',
+    icon: '✅',
+    color: '#059669',
+    description: 'Probe rounds completed. Transitioning to the next core placement pillar.',
+  },
+};
+

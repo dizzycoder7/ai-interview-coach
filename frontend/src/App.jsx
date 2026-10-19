@@ -2,14 +2,18 @@ import { useState, useEffect } from 'react';
 import LandingPage from './pages/LandingPage';
 import InterviewRoom from './pages/InterviewRoom';
 import Scorecard from './pages/Scorecard';
+import WarmupPracticeRoom from './components/Warmup/WarmupPracticeRoom';
+import WarmupReview from './components/Warmup/WarmupReview';
 import NavigationRail from './components/NavigationRail/NavigationRail';
 import TabModal from './components/NavigationRail/TabModal';
 import './index.css';
 
 export default function App() {
-  const [page, setPage] = useState('landing'); // 'landing' | 'interview' | 'scorecard'
+  const [page, setPage] = useState('landing'); // 'landing' | 'interview' | 'scorecard' | 'warmup-practice' | 'warmup-review'
   const [sessionData, setSessionData] = useState(null);
   const [scoreData, setScoreData] = useState(null);
+  const [warmupSession, setWarmupSession] = useState(null);
+  const [warmupReviewData, setWarmupReviewData] = useState(null);
 
   // Active navigation tab ('new' | 'analysis' | 'history' | 'resume' | 'settings')
   const [activeTab, setActiveTab] = useState('new');
@@ -61,19 +65,38 @@ export default function App() {
     setActiveTab('new');
   };
 
+  const startWarmup = ({ track, customQuestions = null }) => {
+    setWarmupSession({ track, customQuestions });
+    setPage('warmup-practice');
+    setActiveTab('new');
+  };
+
+  const finishWarmup = (data) => {
+    setWarmupReviewData(data);
+    setPage('warmup-review');
+    setActiveTab('new');
+  };
+
+  const restartWarmup = () => {
+    setWarmupReviewData(null);
+    setPage('warmup-practice');
+  };
+
   const goHome = () => {
     setPage('landing');
     setSessionData(null);
     setScoreData(null);
+    setWarmupSession(null);
+    setWarmupReviewData(null);
     setActiveTab('new');
   };
 
   const handleSelectTab = (tabId) => {
     if (tabId === 'new') {
-      if (page === 'scorecard') {
+      if (page === 'scorecard' || page === 'warmup-review') {
         goHome();
-      } else if (page === 'interview') {
-        if (window.confirm('Do you want to leave the active interview and start a new one?')) {
+      } else if (page === 'interview' || page === 'warmup-practice') {
+        if (window.confirm('Do you want to leave the active practice session?')) {
           goHome();
         }
       }
@@ -82,6 +105,7 @@ export default function App() {
       setActiveTab(tabId);
     }
   };
+
 
   return (
     <div
@@ -94,8 +118,8 @@ export default function App() {
         backgroundColor: 'var(--color-bg)',
       }}
     >
-      {/* Desktop Left Rail & Mobile Bottom Bar (hidden during active interview for clean focus) */}
-      {page !== 'interview' && (
+      {/* Desktop Left Rail & Mobile Bottom Bar (hidden during active interview & active warmup for clean focus) */}
+      {page !== 'interview' && page !== 'warmup-practice' && (
         <NavigationRail
           activeTab={activeTab}
           onSelectTab={handleSelectTab}
@@ -123,6 +147,7 @@ export default function App() {
         {page === 'landing' && (
           <LandingPage
             onStart={startInterview}
+            onStartWarmup={startWarmup}
             onOpenMenu={() => setIsMenuOpen(true)}
           />
         )}
@@ -138,6 +163,21 @@ export default function App() {
           />
         )}
         {page === 'scorecard' && <Scorecard scoreData={scoreData} onHome={goHome} />}
+        {page === 'warmup-practice' && (
+          <WarmupPracticeRoom
+            track={warmupSession?.track}
+            customQuestions={warmupSession?.customQuestions}
+            onComplete={finishWarmup}
+            onExit={goHome}
+          />
+        )}
+        {page === 'warmup-review' && (
+          <WarmupReview
+            reviewData={warmupReviewData}
+            onRestart={restartWarmup}
+            onHome={goHome}
+          />
+        )}
       </main>
 
       {/* Modal for Navigation Rail Tabs (Analysis, History, Resume, Settings) */}

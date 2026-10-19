@@ -1,9 +1,12 @@
 import { useState, useRef } from 'react';
 import { sessionApi, interviewApi } from '../api/client';
 import ResumeUpload from '../components/ResumeUpload/ResumeUpload';
-import { getAdaptiveOpeningQuestion, recordAskedQuestionId } from '../utils/questionBank';
+import { getAdaptiveOpeningQuestion, recordAskedQuestionId, INTERVIEWER_PERSONAS } from '../utils/questionBank';
+import { WARMUP_TRACKS } from '../utils/warmupQuestionBank';
+import WarmupBrowseModal from '../components/Warmup/WarmupBrowseModal';
 import heroImg from '../assets/ai_coach_light_hero.jpg';
 import styles from './LandingPage.module.css';
+
 
 const TARGET_COMPANIES = [
   'TCS Ninja & Digital',
@@ -65,9 +68,14 @@ const EXPERIENCE_LEVELS = [
   },
 ];
 
-export default function LandingPage({ onStart, onOpenMenu }) {
+export default function LandingPage({ onStart, onStartWarmup, onOpenMenu }) {
+  const [activeMode, setActiveMode] = useState('WARMUP'); // 'WARMUP' | 'PLACEMENT'
+  const [selectedWarmupTrack, setSelectedWarmupTrack] = useState(WARMUP_TRACKS[0]);
+  const [isBrowseModalOpen, setIsBrowseModalOpen] = useState(false);
+
   const [selectedType, setSelectedType] = useState('TECHNICAL');
   const [experienceLevel, setExperienceLevel] = useState('JUNIOR');
+  const [selectedPersona, setSelectedPersona] = useState('STRICT_CAMPUS');
   const [name, setName] = useState('');
   const [resumeData, setResumeData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -148,6 +156,7 @@ export default function LandingPage({ onStart, onOpenMenu }) {
         candidateName: name,
         resumeData,
         experienceLevel,
+        interviewerPersona: selectedPersona,
       });
     } catch (e) {
       console.error('Error starting interview:', e);
@@ -277,139 +286,274 @@ export default function LandingPage({ onStart, onOpenMenu }) {
         {/* Placement Mock Interview Setup Card */}
         <section ref={setupCardRef} className={styles.setupSection}>
           <div className={styles.setupGlassCard}>
-            <div className={styles.setupHeader}>
-              <div className={styles.setupHeaderIcon}>🎯</div>
-              <div>
-                <h2 className={styles.setupTitle}>Configure your placement mock</h2>
-                <p className={styles.setupSubtitle}>
-                  Tailored specifically for Indian IT services campus recruitment (TCS, Infosys, Wipro, Cognizant, Accenture, Capgemini).
-                </p>
+            {/* Mode Toggle Switcher */}
+            <div className={styles.modeToggleContainer}>
+              <div className={styles.modeToggleBar}>
+                <button
+                  type="button"
+                  className={`${styles.modeOptionBtn} ${activeMode === 'WARMUP' ? styles.modeOptionActive : ''}`}
+                  onClick={() => setActiveMode('WARMUP')}
+                >
+                  <span>🚀</span> Google Interview Warmup
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.modeOptionBtn} ${activeMode === 'PLACEMENT' ? styles.modeOptionActive : ''}`}
+                  onClick={() => setActiveMode('PLACEMENT')}
+                >
+                  <span>🎯</span> Campus Placement Simulation
+                </button>
               </div>
             </div>
 
-            {/* Step 1: Candidate Name */}
-            <div className={styles.field}>
-              <label className={styles.fieldLabel}>
-                <span>👤</span> Candidate name
-              </label>
-              <input
-                type="text"
-                className={styles.textInput}
-                placeholder="e.g. Rohit Sharma"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleStart()}
-              />
-            </div>
+            {activeMode === 'WARMUP' ? (
+              <>
+                <div className={styles.setupHeader}>
+                  <div className={styles.setupHeaderIcon}>🚀</div>
+                  <div>
+                    <h2 className={styles.setupTitle}>Google Interview Warmup Practice</h2>
+                    <p className={styles.setupSubtitle}>
+                      Practice real-world interview questions in a low-pressure environment. Get non-judgmental ML insights on job-related terms, most-used words, and structural talking points.
+                    </p>
+                  </div>
+                </div>
 
-            {/* Step 2: Resume Upload (Optional) */}
-            <div className={styles.field}>
-              <div className={styles.fieldLabelRow}>
-                <label className={styles.fieldLabel}>
-                  <span>📄</span> Resume (Optional)
-                </label>
-                <span className={styles.fieldHint}>PDF, DOCX (Max 5MB)</span>
-              </div>
-              <ResumeUpload
-                onResumeParsed={(data) => setResumeData(data)}
-                onResumeRemoved={() => setResumeData(null)}
-              />
-            </div>
+                {/* Step 1: Career Track Selection */}
+                <div className={styles.field}>
+                  <div className={styles.fieldLabelRow}>
+                    <label className={styles.fieldLabel}>
+                      <span>🎯</span> Select career track
+                    </label>
+                    <span className={styles.fieldHint}>5 questions per session</span>
+                  </div>
 
-            {/* Step 3: Interview Track */}
-            <div className={styles.field}>
-              <div className={styles.fieldLabelRow}>
-                <label className={styles.fieldLabel}>
-                  <span>🎯</span> Select interview track
-                </label>
-                <span className={styles.fieldHint}>Placement focus</span>
-              </div>
-
-              <div className={styles.trackGrid}>
-                {INTERVIEW_TRACKS.map((t) => {
-                  const isSelected = selectedType === t.id;
-                  return (
-                    <div
-                      key={t.id}
-                      className={`${styles.trackCard} ${isSelected ? styles.trackCardSelected : ''}`}
-                      onClick={() => setSelectedType(t.id)}
-                    >
-                      <div className={styles.trackCardHeader}>
-                        <div className={styles.trackLeftGroup}>
-                          <span className={styles.trackIcon}>{t.iconText}</span>
-                          <span className={styles.trackName}>{t.label}</span>
+                  <div className={styles.warmupTrackGrid}>
+                    {WARMUP_TRACKS.map((t) => {
+                      const isSelected = selectedWarmupTrack.id === t.id;
+                      return (
+                        <div
+                          key={t.id}
+                          className={`${styles.warmupTrackCard} ${isSelected ? styles.warmupTrackSelected : ''}`}
+                          onClick={() => setSelectedWarmupTrack(t)}
+                        >
+                          <div className={styles.warmupTrackHeader}>
+                            <span className={styles.warmupIcon}>{t.icon}</span>
+                            <div className={`${styles.radioCircle} ${isSelected ? styles.radioSelected : ''}`}>
+                              {isSelected && <span>✓</span>}
+                            </div>
+                          </div>
+                          <span className={styles.warmupTrackTitle}>{t.label}</span>
+                          <p className={styles.warmupTrackDesc}>{t.desc}</p>
                         </div>
-                        <div className={`${styles.radioCircle} ${isSelected ? styles.radioSelected : ''}`}>
-                          {isSelected && <span>✓</span>}
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Structure Callout Banner */}
+                <div
+                  className={styles.privacyBanner}
+                  style={{
+                    marginTop: '1.25rem',
+                    background: 'rgba(26, 115, 232, 0.08)',
+                    borderColor: 'rgba(26, 115, 232, 0.25)',
+                  }}
+                >
+                  <span className={styles.privacyIcon}>💡</span>
+                  <p className={styles.privacyText}>
+                    <strong>Google Pedagogical Structure:</strong> Every warmup session provides <strong>1 Background</strong>, <strong>2 Situational</strong>, and <strong>2 Technical</strong> questions with live speech-to-text, audio readout, redo controls, and non-judgmental coaching insights.
+                  </p>
+                </div>
+
+                {/* Warmup Actions Row */}
+                <div className={styles.warmupActionsRow}>
+                  <button
+                    type="button"
+                    className={styles.warmupLaunchBtn}
+                    onClick={() => onStartWarmup && onStartWarmup({ track: selectedWarmupTrack })}
+                  >
+                    <span>Start 5-Question Warmup →</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className={styles.browseQuestionsBtn}
+                    onClick={() => setIsBrowseModalOpen(true)}
+                  >
+                    <span>📖 Browse Question Bank</span>
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className={styles.setupHeader}>
+                  <div className={styles.setupHeaderIcon}>🎯</div>
+                  <div>
+                    <h2 className={styles.setupTitle}>Configure your placement mock</h2>
+                    <p className={styles.setupSubtitle}>
+                      Tailored specifically for Indian IT services campus recruitment (TCS, Infosys, Wipro, Cognizant, Accenture, Capgemini).
+                    </p>
+                  </div>
+                </div>
+
+                {/* Step 1: Candidate Name */}
+                <div className={styles.field}>
+                  <label className={styles.fieldLabel}>
+                    <span>👤</span> Candidate name
+                  </label>
+                  <input
+                    type="text"
+                    className={styles.textInput}
+                    placeholder="e.g. Rohit Sharma"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleStart()}
+                  />
+                </div>
+
+                {/* Step 2: Resume Upload (Optional) */}
+                <div className={styles.field}>
+                  <div className={styles.fieldLabelRow}>
+                    <label className={styles.fieldLabel}>
+                      <span>📄</span> Resume (Optional)
+                    </label>
+                    <span className={styles.fieldHint}>PDF, DOCX (Max 5MB)</span>
+                  </div>
+                  <ResumeUpload
+                    onResumeParsed={(data) => setResumeData(data)}
+                    onResumeRemoved={() => setResumeData(null)}
+                  />
+                </div>
+
+                {/* Step 3: Interview Track */}
+                <div className={styles.field}>
+                  <div className={styles.fieldLabelRow}>
+                    <label className={styles.fieldLabel}>
+                      <span>🎯</span> Select interview track
+                    </label>
+                    <span className={styles.fieldHint}>Placement focus</span>
+                  </div>
+
+                  <div className={styles.trackGrid}>
+                    {INTERVIEW_TRACKS.map((t) => {
+                      const isSelected = selectedType === t.id;
+                      return (
+                        <div
+                          key={t.id}
+                          className={`${styles.trackCard} ${isSelected ? styles.trackCardSelected : ''}`}
+                          onClick={() => setSelectedType(t.id)}
+                        >
+                          <div className={styles.trackCardHeader}>
+                            <div className={styles.trackLeftGroup}>
+                              <span className={styles.trackIcon}>{t.iconText}</span>
+                              <span className={styles.trackName}>{t.label}</span>
+                            </div>
+                            <div className={`${styles.radioCircle} ${isSelected ? styles.radioSelected : ''}`}>
+                              {isSelected && <span>✓</span>}
+                            </div>
+                          </div>
+                          <p className={styles.trackDesc}>{t.desc}</p>
                         </div>
-                      </div>
-                      <p className={styles.trackDesc}>{t.desc}</p>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+                      );
+                    })}
+                  </div>
+                </div>
 
-            {/* Step 4: Experience / Target Bar */}
-            <div className={styles.field}>
-              <div className={styles.fieldLabelRow}>
-                <label className={styles.fieldLabel}>
-                  <span>📶</span> Experience level
-                </label>
-                <span className={styles.fieldHint}>Default: Fresher</span>
-              </div>
+                {/* Step 4: Experience / Target Bar */}
+                <div className={styles.field}>
+                  <div className={styles.fieldLabelRow}>
+                    <label className={styles.fieldLabel}>
+                      <span>📶</span> Experience level
+                    </label>
+                    <span className={styles.fieldHint}>Default: Fresher</span>
+                  </div>
 
-              <div className={styles.levelGrid}>
-                {EXPERIENCE_LEVELS.map((lvl) => {
-                  const isSelected = experienceLevel === lvl.id;
-                  return (
-                    <div
-                      key={lvl.id}
-                      className={`${styles.levelCard} ${isSelected ? styles.levelCardSelected : ''}`}
-                      onClick={() => setExperienceLevel(lvl.id)}
-                    >
-                      <div className={styles.levelCardHeader}>
-                        <span className={styles.levelName}>{lvl.label}</span>
-                        <div className={`${styles.radioCircle} ${isSelected ? styles.radioSelected : ''}`}>
-                          {isSelected && <span>✓</span>}
+                  <div className={styles.levelGrid}>
+                    {EXPERIENCE_LEVELS.map((lvl) => {
+                      const isSelected = experienceLevel === lvl.id;
+                      return (
+                        <div
+                          key={lvl.id}
+                          className={`${styles.levelCard} ${isSelected ? styles.levelCardSelected : ''}`}
+                          onClick={() => setExperienceLevel(lvl.id)}
+                        >
+                          <div className={styles.levelCardHeader}>
+                            <span className={styles.levelName}>{lvl.label}</span>
+                            <div className={`${styles.radioCircle} ${isSelected ? styles.radioSelected : ''}`}>
+                              {isSelected && <span>✓</span>}
+                            </div>
+                          </div>
+                          <span className={styles.levelSub}>{lvl.sub}</span>
+                          <p className={styles.levelDesc}>{lvl.desc}</p>
                         </div>
-                      </div>
-                      <span className={styles.levelSub}>{lvl.sub}</span>
-                      <p className={styles.levelDesc}>{lvl.desc}</p>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+                      );
+                    })}
+                  </div>
+                </div>
 
-            {/* Strict Privacy Notice Banner */}
-            <div className={styles.privacyBanner}>
-              <span className={styles.privacyIcon}>🔒</span>
-              <p className={styles.privacyText}>
-                <strong>Strict Privacy Guarantee:</strong> Video and audio are recorded exclusively in your browser memory via MediaRecorder. Nothing is ever uploaded or stored on any server.
-              </p>
-            </div>
+                {/* Step 5: Interviewer Persona (Final Round AI adaptive probing style) */}
+                <div className={styles.field}>
+                  <div className={styles.fieldLabelRow}>
+                    <label className={styles.fieldLabel}>
+                      <span>👔</span> AI Interviewer persona
+                    </label>
+                    <span className={styles.fieldHint}>Select your panel style</span>
+                  </div>
 
-            {error && <div className={styles.errorMessage}>{error}</div>}
+                  <div className={styles.personaGrid}>
+                    {INTERVIEWER_PERSONAS.map((p) => {
+                      const isSelected = selectedPersona === p.id;
+                      return (
+                        <div
+                          key={p.id}
+                          className={`${styles.personaCard} ${isSelected ? styles.personaCardSelected : ''}`}
+                          onClick={() => setSelectedPersona(p.id)}
+                        >
+                          <div className={styles.personaCardHeader}>
+                            <span className={styles.personaBadgeText}>{p.badge}</span>
+                            <div className={`${styles.radioCircle} ${isSelected ? styles.radioSelected : ''}`}>
+                              {isSelected && <span>✓</span>}
+                            </div>
+                          </div>
+                          <span className={styles.personaCompany}>{p.company}</span>
+                          <p className={styles.personaDesc}>{p.tone}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
 
-            {/* Action Button: Start Practice Interview */}
-            <button
-              className={styles.launchBtn}
-              onClick={handleStart}
-              disabled={loading}
-              type="button"
-            >
-              {loading ? (
-                <>
-                  <span className={styles.spinner} />
-                  <span>Initializing placement interview...</span>
-                </>
-              ) : (
-                <span>Launch Placement Interview Room →</span>
-              )}
-            </button>
+                {/* Strict Privacy Notice Banner */}
+                <div className={styles.privacyBanner}>
+                  <span className={styles.privacyIcon}>🔒</span>
+                  <p className={styles.privacyText}>
+                    <strong>Strict Privacy Guarantee:</strong> Video and audio are recorded exclusively in your browser memory via MediaRecorder. Nothing is ever uploaded or stored on any server.
+                  </p>
+                </div>
+
+                {error && <div className={styles.errorMessage}>{error}</div>}
+
+                {/* Action Button: Start Practice Interview */}
+                <button
+                  className={styles.launchBtn}
+                  onClick={handleStart}
+                  disabled={loading}
+                  type="button"
+                >
+                  {loading ? (
+                    <>
+                      <span className={styles.spinner} />
+                      <span>Initializing placement interview...</span>
+                    </>
+                  ) : (
+                    <span>Launch Placement Interview Room →</span>
+                  )}
+                </button>
+              </>
+            )}
           </div>
         </section>
+
 
         {/* Structured 3-Step Walkthrough Section */}
         <section id="methodology" className={styles.walkthroughSection}>
@@ -491,6 +635,22 @@ export default function LandingPage({ onStart, onOpenMenu }) {
           </div>
         </div>
       )}
+
+      {/* Warmup Question Bank Browser Modal */}
+      <WarmupBrowseModal
+        isOpen={isBrowseModalOpen}
+        onClose={() => setIsBrowseModalOpen(false)}
+        track={selectedWarmupTrack}
+        onSelectQuestion={(q) => {
+          if (onStartWarmup) {
+            onStartWarmup({
+              track: selectedWarmupTrack,
+              customQuestions: [q],
+            });
+          }
+        }}
+      />
     </div>
   );
 }
+

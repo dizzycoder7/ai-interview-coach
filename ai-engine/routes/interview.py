@@ -20,6 +20,9 @@ class EvaluateAnswerRequest(BaseModel):
     conversation_history: Optional[list] = []
     resume_text: Optional[str] = None
     experience_level: Optional[str] = "JUNIOR"  # JUNIOR, MID, SENIOR
+    conversational_turn: Optional[int] = 0
+    interviewer_persona: Optional[str] = "STRICT_CAMPUS"
+    root_question: Optional[str] = None
 
 class ScoreSessionRequest(BaseModel):
     session_id: Union[str, int]
@@ -45,7 +48,7 @@ async def start_interview(req: StartInterviewRequest):
 
 @router.post("/evaluate")
 async def evaluate_answer(req: EvaluateAnswerRequest):
-    """Evaluate an answer and generate the next follow-up question."""
+    """Evaluate an answer with dynamic follow-up probing and dimension scoring."""
     try:
         result = await llm.evaluate_and_followup(
             question=req.question,
@@ -53,11 +56,15 @@ async def evaluate_answer(req: EvaluateAnswerRequest):
             interview_type=req.interview_type,
             history=req.conversation_history,
             resume_text=req.resume_text,
-            experience_level=req.experience_level or "JUNIOR"
+            experience_level=req.experience_level or "JUNIOR",
+            conversational_turn=req.conversational_turn or 0,
+            interviewer_persona=req.interviewer_persona or "STRICT_CAMPUS",
+            root_question=req.root_question
         )
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 
 @router.post("/score")
@@ -73,3 +80,50 @@ async def score_session(req: ScoreSessionRequest):
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+class WarmupGenerateRoundRequest(BaseModel):
+    track: Optional[str] = "SOFTWARE_ENGINEERING"
+    job_description: Optional[str] = None
+    candidate_name: Optional[str] = "Candidate"
+
+
+class WarmupAnalyzeAnswerRequest(BaseModel):
+    question: str
+    answer_text: str
+    category: Optional[str] = "TECHNICAL"
+    track: Optional[str] = "SOFTWARE_ENGINEERING"
+    target_terms: Optional[list] = []
+    talking_points: Optional[list] = []
+
+
+@router.post("/warmup/generate-round")
+async def warmup_generate_round(req: WarmupGenerateRoundRequest):
+    """Generate or customize a 5-question Google-style warmup session (1 Background, 2 Situational, 2 Technical)."""
+    try:
+        result = await llm.generate_warmup_round(
+            track=req.track or "SOFTWARE_ENGINEERING",
+            job_description=req.job_description,
+            candidate_name=req.candidate_name or "Candidate"
+        )
+        return {"questions": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/warmup/analyze-answer")
+async def warmup_analyze_answer(req: WarmupAnalyzeAnswerRequest):
+    """Analyze answer using non-judgmental ML pattern recognition (Job-related terms, most-used words, talking points)."""
+    try:
+        result = await llm.analyze_warmup_answer(
+            question=req.question,
+            answer_text=req.answer_text,
+            category=req.category or "TECHNICAL",
+            track=req.track or "SOFTWARE_ENGINEERING",
+            target_terms=req.target_terms or [],
+            talking_points=req.talking_points or []
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+

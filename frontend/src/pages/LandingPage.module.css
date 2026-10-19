@@ -518,6 +518,67 @@
   margin: 0;
 }
 
+/* Persona Selector Grid */
+.personaGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+}
+
+@media (max-width: 640px) {
+  .personaGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.personaCard {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-sm);
+  padding: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.personaCard:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.personaCardSelected {
+  background: rgba(124, 58, 237, 0.12);
+  border-color: #8b5cf6;
+}
+
+.personaCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.personaBadgeText {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: hsl(var(--foreground));
+}
+
+.personaCompany {
+  font-size: 0.72rem;
+  color: #a78bfa;
+  font-weight: 600;
+}
+
+.personaDesc {
+  font-size: 0.73rem;
+  color: hsl(var(--muted-foreground));
+  line-height: 1.35;
+  margin: 0;
+}
+
+
 /* Privacy Guarantee Banner */
 .privacyBanner {
   display: flex;
@@ -768,3 +829,157 @@
   font-weight: 600;
   cursor: pointer;
 }
+
+/* ==========================================================================
+   Google Interview Warmup Mode Switcher & Track Selector
+   ========================================================================== */
+
+.modeToggleContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 2rem;
+  width: 100%;
+}
+
+.modeToggleBar {
+  display: inline-flex;
+  padding: 0.35rem;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-pill);
+  gap: 0.35rem;
+}
+
+.modeOptionBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1.35rem;
+  border-radius: var(--radius-pill);
+  border: none;
+  background: transparent;
+  color: hsl(var(--muted-foreground));
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.modeOptionBtn:hover {
+  color: hsl(var(--foreground));
+}
+
+.modeOptionActive {
+  background: #1a73e8 !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 10px rgba(26, 115, 232, 0.4);
+}
+
+.warmupTrackGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.warmupTrackCard {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-card);
+  padding: 1.25rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  text-align: left;
+}
+
+.warmupTrackCard:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+.warmupTrackSelected {
+  background: rgba(26, 115, 232, 0.12) !important;
+  border-color: #1a73e8 !important;
+  box-shadow: 0 0 15px rgba(26, 115, 232, 0.3);
+}
+
+.warmupTrackHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.warmupIcon {
+  font-size: 1.6rem;
+}
+
+.warmupTrackTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+}
+
+.warmupTrackDesc {
+  font-size: 0.8rem;
+  color: hsl(var(--muted-foreground));
+  line-height: 1.45;
+}
+
+.warmupActionsRow {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.warmupLaunchBtn {
+  flex: 1;
+  min-width: 220px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.95rem 1.75rem;
+  border-radius: var(--radius-pill);
+  background: #1a73e8;
+  color: #fff;
+  border: none;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(26, 115, 232, 0.4);
+  transition: all var(--transition-fast);
+}
+
+.warmupLaunchBtn:hover {
+  background: #1557b0;
+  transform: translateY(-1px);
+}
+
+.browseQuestionsBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.95rem 1.4rem;
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: hsl(var(--foreground));
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.browseQuestionsBtn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+

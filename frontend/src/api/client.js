@@ -25,8 +25,17 @@ export const sessionApi = {
 export const interviewApi = {
   start: (data) => aiApi.post('/interview/start', data),
   evaluate: (data) => aiApi.post('/interview/evaluate', {
-    ...data,
     session_id: String(data.session_id || Date.now()),
+    question: data.question,
+    answer_text: data.answer_text,
+    interview_type: data.interview_type || 'TECHNICAL',
+    conversation_history: data.conversation_history || data.history || [],
+    resume_text: data.resume_text || null,
+    experience_level: data.experience_level || 'JUNIOR',
+    conversational_turn: data.conversational_turn !== undefined ? data.conversational_turn : 0,
+    interviewer_persona: data.interviewer_persona || 'STRICT_CAMPUS',
+    root_question: data.root_question || data.question,
+    ...data,
   }),
   score: (data) => aiApi.post('/interview/score', {
     session_id: String(data.session_id || Date.now()),
@@ -52,4 +61,7 @@ export const interviewApi = {
   analyzeEmotion: (formData) => aiApi.post('/emotion/analyze-frame', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
   analyzeFillerWords: (text) => aiApi.post('/speech/analyze-filler-words', { text }),
   parseResume: (formData) => aiApi.post('/resume/parse', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  generateWarmupRound: (data) => aiApi.post('/interview/warmup/generate-round', data),
+  analyzeWarmupAnswer: (data) => aiApi.post('/interview/warmup/analyze-answer', data),
 };
+

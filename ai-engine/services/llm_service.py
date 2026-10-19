@@ -178,7 +178,10 @@ Formulate an opening question tailored specifically to this candidate, their tar
         interview_type: str,
         history: list,
         resume_text: Optional[str] = None,
-        experience_level: str = "JUNIOR"
+        experience_level: str = "JUNIOR",
+        conversational_turn: int = 0,
+        interviewer_persona: str = "STRICT_CAMPUS",
+        root_question: Optional[str] = None
     ) -> dict:
         clean_ans = answer.strip()
         words = clean_ans.split()
@@ -191,6 +194,16 @@ Formulate an opening question tailored specifically to this candidate, their tar
         if word_count < 8 or clean_ans in ["", "(No verbal answer provided / Candidate skipped question)", "nothing", "i don't know", "idk", "skip"]:
             return {
                 "score": 1,
+                "dimension_scores": {
+                    "structure": 10,
+                    "specificity": 10,
+                    "ownership": 10,
+                    "technical_rigor": 10,
+                    "delivery": 10
+                },
+                "probe_type": "PROBE_SILENCE",
+                "active_listening_anchor": "Candidate provided virtually no verbal response.",
+                "gaps_detected": ["Empty or one-word response", "No technical attempt made"],
                 "feedback": f"Failing response: Only {word_count} words recorded. Saying almost nothing, staying silent, or giving a 1-word non-answer results in an immediate failing score (1/10). In a real technical interview, silence or dodging questions is an instant rejection.",
                 "follow_up_question": "Let's reset: Can you explain the fundamental concept behind this problem, or walk me through how you would begin breaking down the solution?",
                 "improved_answer": (
@@ -224,6 +237,16 @@ Formulate an opening question tailored specifically to this candidate, their tar
         if (unique_ratio < 0.45 and word_count >= 25) or max_tri_freq >= 3:
             return {
                 "score": 2,
+                "dimension_scores": {
+                    "structure": 25,
+                    "specificity": 15,
+                    "ownership": 25,
+                    "technical_rigor": 20,
+                    "delivery": 15
+                },
+                "probe_type": "PROBE_REPETITION",
+                "active_listening_anchor": "Detected repetitive loops in introductory greeting phrases.",
+                "gaps_detected": ["High phrase repetition with limited unique vocabulary", "Lack of concrete project specifics"],
                 "feedback": f"Failing score (2/10): High repetition detected. The response repeats introductory phrases ({max_tri_freq} repetitions of identical phrases) with only {int(unique_ratio*100)}% unique words. It lacks structured technical depth and concrete project examples. In an IT campus placement drive (TCS, Infosys, Wipro, Accenture), avoid repeating greetings. Deliver a crisp introduction, state your final-year project title and tech stack, and explain your personal contribution.",
                 "follow_up_question": "Let's reset and test your Core Java fundamentals: In Java, can you explain the difference between Method Overloading and Method Overriding with a short code example?",
                 "improved_answer": (
@@ -246,99 +269,123 @@ Formulate an opening question tailored specifically to this candidate, their tar
                 ]
             }
 
-        if interview_type.upper() in ["BEHAVIORAL", "HR"]:
-            system = """You are an HR panel member from an Indian IT services company's campus placement drive evaluating a final-year B.Tech student or fresher.
-Score as a recruiter would for a fresher. Judge correctness, clarity, examples and honesty about what the candidate knows. Do not expect senior-level depth. Return JSON only.
-Cover self-introduction, strengths and weaknesses, teamwork, handling pressure, willingness to relocate and work in shifts, willingness to learn, and project contribution.
-Use simple, clear English. Ask one question at a time. Follow up on the candidate's own words. Be polite but firm.
+        persona_directives = {
+            "FAANG_BAR_RAISER": (
+                "INTERVIEWER PERSONA: FAANG Bar Raiser Technical Lead.\n"
+                "Tone: Rigorous, highly analytical, uncompromising on edge cases, scalability, concurrency, time/space complexity, and trade-offs.\n"
+                "Probing Focus: Challenge superficial answers. If they state an approach, immediately test boundary conditions, memory pressure, or scale bottlenecks."
+            ),
+            "SUPPORTIVE_MENTOR": (
+                "INTERVIEWER PERSONA: Senior Engineering Mentor & Placement Coach.\n"
+                "Tone: Encouraging, constructive, empathetic. Guides the candidate through structured problem breakdown.\n"
+                "Probing Focus: Provide progressive hints. If they missed a key component, ask a guiding question to nudge them toward the complete solution."
+            ),
+            "STRICT_CAMPUS": (
+                "INTERVIEWER PERSONA: Senior Campus Placement Technical Panelist (TCS, Infosys, Wipro, Cognizant, Accenture).\n"
+                "Tone: Direct, professional, firm. Zero tolerance for fluff or buzzwords without fundamental understanding.\n"
+                "Probing Focus: Test Core Java, OOPs, Collections, DBMS & SQL queries, and demand individual code ownership of their final-year project."
+            )
+        }
+        selected_directive = persona_directives.get(interviewer_persona, persona_directives["STRICT_CAMPUS"])
 
-STRICT REPETITION AND SUBSTANCE CHECK:
-- If the candidate's answer is repetitive, echoes greetings, lacks structured points, or does not provide concrete examples, score MUST NOT exceed 2-3 out of 10.
-- Never award a high score (7-10) for raw length or word count if the text is repetitive or lacks substance.
+        turn_directives = {
+            0: (
+                "CONVERSATIONAL TURN: 0 (Root Question Answer Evaluation).\n"
+                "Scan candidate response for 3 specific gap modes:\n"
+                "1. MISSING_METRICS: Claimed performance or efficiency improvement without quantitative data (throughput, latency, %, users).\n"
+                "2. DIFFUSED_OWNERSHIP: Used 'we' repeatedly without detailing what 'I' personally wrote or designed.\n"
+                "3. SHALLOW_MECHANICS: Quoted high-level definitions without explaining internal memory, data structures, or code mechanics.\n"
+                "Generate a targeted PROBE 1 (probe_type = 'PROBE_METRIC', 'PROBE_OWNERSHIP', or 'PROBE_MECHANICS').\n"
+                "Include 'active_listening_anchor' echoing what the candidate specifically said before probing."
+            ),
+            1: (
+                "CONVERSATIONAL TURN: 1 (First Probe Follow-Up Evaluation).\n"
+                "The candidate responded to the initial probe. Now STRESS-TEST their answer:\n"
+                "Ask about an edge case, failure mode, null/empty input, high concurrency, or alternative technology trade-off.\n"
+                "Set probe_type = 'PROBE_EDGE_CASE'.\n"
+                "Include 'active_listening_anchor' acknowledging their clarification before launching the stress test."
+            ),
+            2: (
+                "CONVERSATIONAL TURN: 2 (Concluding Deep-Dive Thread).\n"
+                "Candidate has completed 2 drill-down probes on this topic. Summarize their technical grasp and formulate an ADVANCING question transitioning to the next core placement competency.\n"
+                "Set probe_type = 'ADVANCE_TOPIC'.\n"
+                "Include 'active_listening_anchor' summarizing their performance on this thread."
+            )
+        }
+        turn_directive = turn_directives.get(min(2, conversational_turn), turn_directives[0])
 
-SCORING GUIDELINES (1 to 10):
-- 1-4: Incoherent, evasive, silent, repetitive loops, or unable to communicate basic thoughts.
-- 5-6: Generic answers without concrete examples, but polite and willing to learn.
-- 7-8: Clear, confident answers with genuine college/project examples and positive attitude.
-- 9-10: Exceptional clarity, excellent examples (teamwork, handling pressure, adaptability), and strong communication.
+        system = f"""{selected_directive}
 
-MASTER MODEL ANSWER RULES ('improved_answer'):
-Deliver an exemplary 3-part explanation:
-Part 1: 💡 Everyday Analogy (ELI5): A simple real-world analogy.
-Part 2: 🏆 Gold Standard Answer Script: How a top fresher structures their response (Situation -> Action -> Learning/Result).
-Part 3: 🔍 What Your Answer Was Missing: Direct, encouraging bullet points on what was missing.
+{turn_directive}
+
+FINAL ROUND AI MULTI-DIMENSION SCORING RUBRIC (0 to 100 scale for each):
+1. structure: Logical flow (STAR method: Situation -> Task -> Action -> Result).
+2. specificity: Concrete metrics, named technologies, and quantifiable numbers.
+3. ownership: Individual 'I' contribution vs diffused 'we' team hiding.
+4. technical_rigor: Memory models, code accuracy, boundary conditions, and complexity.
+5. delivery: Pace, word count adequacy (45-120 words), lack of repetition, no filler words.
+
+Overall score: 1 to 10 scale (or average of dimension_scores / 10).
 
 Return ONLY valid JSON matching this schema:
-{
+{{
   "score": 7,
-  "feedback": "Constructive feedback from the HR recruiter...",
-  "follow_up_question": "Next HR or project question following up on what they said...",
+  "dimension_scores": {{
+    "structure": 75,
+    "specificity": 70,
+    "ownership": 80,
+    "technical_rigor": 75,
+    "delivery": 80
+  }},
+  "probe_type": "PROBE_METRIC",
+  "active_listening_anchor": "You highlighted that your team built an automated assessment portal...",
+  "gaps_detected": ["...", "..."],
+  "feedback": "Constructive evaluation from the interviewer persona...",
+  "follow_up_question": "Adaptive probing follow-up question...",
   "improved_answer": "💡 Everyday Analogy (ELI5):\n...\n\n🏆 Gold Standard Answer Script:\n...\n\n🔍 What Your Answer Was Missing:\n...",
   "strengths": ["...", "..."],
   "improvements": ["...", "..."]
-}"""
-        else:
-            system = """You are a panel member from an Indian IT services company's campus placement drive.
-The candidate is a final-year B.Tech student or a fresher.
-Score as a recruiter would for a fresher. Judge correctness, clarity, examples and honesty about what the candidate knows. Do not expect senior-level depth. Return JSON only.
-Ask about Core Java, OOPs, Collections, DBMS and SQL, basic data structures, aptitude-style logic, and the candidate's final-year project.
-Use simple, clear English. Ask one question at a time. Follow up on the candidate's own words. Do not ask system design or distributed systems questions. Be polite but firm.
-
-STRICT REPETITION AND SUBSTANCE CHECK:
-- If the candidate's answer is repetitive, repeats introductory greetings, lacks structured points, or does not provide concrete examples, score MUST NOT exceed 2-3 out of 10.
-- Never award a high score (7-10) for raw length or word count if the text is repetitive or lacks substance.
-
-SCORING GUIDELINES (1 to 10):
-- 1-4: Fundamental misconceptions, repetitive loops, incorrect syntax/logic, or unable to explain basic principles.
-- 5-6: Knows standard textbook definition, but lacks practical examples or struggles to explain how it works in code.
-- 7-8: Good conceptual clarity, gave solid examples (Java classes, OOP concepts, basic SQL queries), understands why and how it works.
-- 9-10: Exceptional clarity, proactively explains edge cases (e.g. null checks, boundary conditions), clean code, and solid understanding of their project.
-
-ADAPTIVE FOLLOW-UP RULES:
-- Deeply analyze what the candidate actually said in their answer.
-- Ask a follow-up that tests deeper comprehension of the fundamental concept or connects directly to their final-year project.
-  * Examples: "How does HashMap handle collisions in Java?", "What is the difference between @Autowired and Constructor Injection?", "Can you explain how an INNER JOIN differs from a LEFT JOIN with a query example?", "In your final-year project, how did you handle data validation and database storage?"
-- STRICT PROHIBITION: DO NOT ask system design, microservices, or complex distributed systems questions. Keep questions focused on code logic, fundamentals, and their project.
-
-MASTER MODEL ANSWER RULES ('improved_answer'):
-Deliver an exemplary 3-part explanation:
-Part 1: 💡 Everyday Analogy (ELI5): A crystal-clear real-world metaphor that anyone can understand in 10 seconds.
-Part 2: 🏆 Gold Standard Answer Script: The exact, structured answer an exemplary candidate gives (crisp definition -> code structure/internal mechanics -> edge cases & best practices).
-Part 3: 🔍 What Your Answer Was Missing: Direct, honest bullet points highlighting what the candidate omitted, assumed, or stated incorrectly.
-
-Return ONLY valid JSON matching this schema:
-{
-  "score": 7,
-  "feedback": "Constructive evaluation citing specific strengths and gaps...",
-  "follow_up_question": "Follow-up question testing deeper understanding of the fundamental topic or project...",
-  "improved_answer": "💡 Everyday Analogy (ELI5):\n...\n\n🏆 Gold Standard Answer Script:\n...\n\n🔍 What Your Answer Was Missing:\n...",
-  "strengths": ["...", "..."],
-  "improvements": ["...", "..."]
-}"""
+}}"""
 
         resume_snippet = f"\nCandidate Resume Highlights:\n{resume_text[:1500]}" if resume_text and len(resume_text.strip()) > 30 else ""
 
         prompt = f"""
-Interview Track: {interview_type}
+Candidate Target Track: {interview_type}
 Candidate Level: {level_upper}
-Question Asked: {question}
+Interviewer Persona: {interviewer_persona}
+Conversational Turn in Current Topic: {conversational_turn}
+Original Root Question: {root_question or question}
+Current Question Asked: {question}
 Candidate's Answer: {answer}
-Previous Conversation Rounds: {len(history)}
+Previous History Turns Count: {len(history)}
 {resume_snippet}
 
-Evaluate the answer accurately for a {level_upper} level candidate and generate an appropriate follow-up and the 3-part master model answer.
+Analyze the candidate's answer according to Final Round AI dynamic probing logic and dimension-level scoring.
 """
         raw = await self._call_llm(prompt, system)
         if raw:
             match = re.search(r'\{.*\}', raw, re.DOTALL)
             if match:
                 try:
-                    return json.loads(match.group())
+                    parsed = json.loads(match.group())
+                    if "dimension_scores" in parsed and "follow_up_question" in parsed:
+                        return parsed
                 except Exception:
                     pass
 
         # Smart fallback if API is unreachable
-        return self._fallback_evaluation(question, answer, interview_type, history, resume_text, level_upper)
+        return self._fallback_evaluation(
+            question=question,
+            answer=answer,
+            interview_type=interview_type,
+            history=history,
+            resume_text=resume_text,
+            experience_level=level_upper,
+            conversational_turn=conversational_turn,
+            interviewer_persona=interviewer_persona,
+            root_question=root_question
+        )
+
 
 
     async def generate_scorecard(self, qa_pairs: list, emotion_data: Optional[dict], eye_contact_score: Optional[float], filler_word_count: int) -> dict:
@@ -528,7 +575,10 @@ Evaluate the answer accurately for a {level_upper} level candidate and generate 
         interview_type: str,
         history: list,
         resume_text: Optional[str] = None,
-        experience_level: str = "JUNIOR"
+        experience_level: str = "JUNIOR",
+        conversational_turn: int = 0,
+        interviewer_persona: str = "STRICT_CAMPUS",
+        root_question: Optional[str] = None
     ) -> dict:
         words = answer.strip().split()
         word_count = len(words)
@@ -549,6 +599,16 @@ Evaluate the answer accurately for a {level_upper} level candidate and generate 
         if (unique_ratio < 0.45 and word_count >= 25) or max_tri_freq >= 3:
             return {
                 "score": 2,
+                "dimension_scores": {
+                    "structure": 25,
+                    "specificity": 15,
+                    "ownership": 25,
+                    "technical_rigor": 20,
+                    "delivery": 15
+                },
+                "probe_type": "PROBE_REPETITION",
+                "active_listening_anchor": "Detected phrase repetition in introductory response.",
+                "gaps_detected": ["Repetitive greeting loops", "No structured technical points"],
                 "feedback": f"Failing score (2/10): High repetition detected ({word_count} words recorded, but only {int(unique_ratio*100)}% unique words with repeated phrase loops). Introductory greetings were repeated without technical depth or concrete project examples. For IT campus placements (TCS, Infosys, Wipro, Accenture), eliminate repeated phrases, state your final-year project title, tech stack (Java/SQL), and describe what you personally built.",
                 "follow_up_question": "Let's test your Core Java fundamentals: Can you explain the difference between Method Overloading and Method Overriding with a short code example?",
                 "improved_answer": (
@@ -569,36 +629,58 @@ Evaluate the answer accurately for a {level_upper} level candidate and generate 
 
         # Short greeting-only or fluff
         has_tech = bool(re.search(r'(java|sql|oops|class|object|database|project|spring|react|python|api|html|css|table|join|query|controller|backend|frontend|server|method|inheritance|polymorphism|encapsulation|abstraction|hashmap|array|loop)', answer, re.IGNORECASE))
-        if word_count < 30 and not has_tech:
-            return {
-                "score": 3,
-                "feedback": f"Score: 3/10. Polite start, but incomplete answer ({word_count} words). You gave an introductory greeting without discussing your engineering project or core subjects. In IT campus drives, recruiters evaluate whether you can discuss your engineering project and core subjects.",
-                "follow_up_question": "Can you walk me through your final-year engineering project? What technologies did you use and what was your personal contribution?",
-                "improved_answer": (
-                    f"💡 Everyday Analogy (ELI5):\n"
-                    f"A greeting opens the door, but the actual interview begins when you discuss your project and technical skills.\n\n"
-                    f"🏆 Gold Standard Answer Script:\n"
-                    f"Briefly introduce yourself (college, degree), immediately transition to your final-year project architecture, and state why you chose your tech stack.\n\n"
-                    f"🔍 What Your Answer Was Missing:\n"
-                    f"• Final-year project walkthrough, tech stack details, and motivation for IT services."
-                ),
-                "strengths": ["Polite conversational delivery"],
-                "improvements": ["Include project details and technical stack", "Answer all parts of the question"]
-            }
+        has_nums = bool(re.search(r'\d+', answer))
+        we_count = len(re.findall(r'\bwe\b', answer, re.IGNORECASE))
+        i_count = len(re.findall(r'\b(i|my|me)\b', answer, re.IGNORECASE))
 
-        # Basic definition without examples vs solid technical answer
-        if not has_tech or word_count < 55:
-            score = 5
-        else:
-            score = min(8, max(6, int(5 + (word_count / 40))))
+        # Dimension scores
+        dim_structure = min(90, max(35, int(40 + (word_count * 0.4))))
+        dim_specificity = min(90, max(30, 45 + (20 if has_nums else 0) + (15 if has_tech else 0)))
+        dim_ownership = 80 if i_count >= 1 else (35 if we_count >= 2 else 55)
+        dim_technical = min(90, max(30, 40 + (30 if has_tech else 0)))
+        dim_delivery = min(95, max(35, int(45 + (word_count * 0.5))))
 
+        avg_dim = int((dim_structure + dim_specificity + dim_ownership + dim_technical + dim_delivery) / 5)
+        overall_score = max(1, min(10, int(avg_dim / 10)))
+
+        gaps = []
+        if not has_nums:
+            gaps.append("Missing quantifiable metrics or data scale")
+        if we_count >= 2 and i_count == 0:
+            gaps.append("Diffused team ownership ('We' trap) without highlighting personal contributions")
+        if not has_tech:
+            gaps.append("Lacks specific technical concepts or framework terminology")
+
+        # Dynamic multi-turn follow-up question determination
         junior_follow_ups = [
-            "That's a good foundation. In Core Java, what is the crucial difference between an Interface and an Abstract Class, and when would you choose one over the other?",
+            "In Core Java, what is the crucial difference between an Interface and an Abstract Class, and when would you choose one over the other?",
             "In MySQL, could you explain the difference between an INNER JOIN and a LEFT JOIN, and how adding an index on a foreign key improves query speed?",
             "In Java collections, when would you choose an ArrayList over a LinkedList, and what are their lookup and insertion complexities?",
             "In your final-year project, how did you handle data validation and error handling for incoming user requests before storing data in the database?"
         ]
         q_idx = len(history) % len(junior_follow_ups)
+
+        if conversational_turn == 0:
+            if we_count >= 2 and i_count == 0:
+                probe_type = "PROBE_OWNERSHIP"
+                active_listening_anchor = "You described what the project team achieved..."
+                follow_up_question = "In campus placement interviews, recruiters want to know YOUR exact personal role. What specific modules, database schemas, or REST endpoints did YOU personally code and test?"
+            elif not has_nums and word_count >= 25:
+                probe_type = "PROBE_METRIC"
+                active_listening_anchor = "You walked through the high-level functional flow..."
+                follow_up_question = "What were the quantifiable metrics of this implementation (for example, latency reduction, throughput, user volume, or test coverage)?"
+            else:
+                probe_type = "PROBE_MECHANICS"
+                active_listening_anchor = "You mentioned the foundational technologies involved..."
+                follow_up_question = "Could you explain the internal mechanics: How does this work under the hood in memory, and what happens when an error or exception occurs?"
+        elif conversational_turn == 1:
+            probe_type = "PROBE_EDGE_CASE"
+            active_listening_anchor = "Understood on the core technical approach..."
+            follow_up_question = "Now consider edge cases and scale: What happens if input data is null or malformed, or if concurrent requests surge tenfold? How does your design remain resilient?"
+        else:
+            probe_type = "ADVANCE_TOPIC"
+            active_listening_anchor = "Solid technical walkthrough on this topic."
+            follow_up_question = junior_follow_ups[q_idx]
 
         is_project_q = bool(re.search(r'project|built|role|academic|application|contribution', question, re.I))
         if is_project_q:
@@ -623,16 +705,30 @@ Evaluate the answer accurately for a {level_upper} level candidate and generate 
                 f"🔍 What Your Answer Was Missing:\n"
                 f"• Provide a concrete code or design example to demonstrate practical understanding.\n"
                 f"• Highlight potential edge cases (like null checks or empty inputs).\n"
-                f"• Connect the concept to how you used it in your project or coursework."
             )
 
+        feedback_text = (
+            f"Evaluated by {interviewer_persona.replace('_', ' ').title()}. Score: {overall_score}/10 (Structure: {dim_structure}%, Specificity: {dim_specificity}%, Ownership: {dim_ownership}%, Technical: {dim_technical}%). "
+            f"{'Demonstrated good conceptual clarity.' if overall_score >= 6 else 'Needs to incorporate more concrete project examples and individual ownership.'}"
+        )
+
         return {
-            "score": score,
-            "feedback": f"Good effort explaining the concept ({word_count} words). To elevate your answer, include concrete Java/SQL code examples and state edge cases proactively.",
-            "follow_up_question": junior_follow_ups[q_idx],
+            "score": overall_score,
+            "dimension_scores": {
+                "structure": dim_structure,
+                "specificity": dim_specificity,
+                "ownership": dim_ownership,
+                "technical_rigor": dim_technical,
+                "delivery": dim_delivery
+            },
+            "probe_type": probe_type,
+            "active_listening_anchor": active_listening_anchor,
+            "gaps_detected": gaps,
+            "feedback": feedback_text,
+            "follow_up_question": follow_up_question,
             "improved_answer": improved_answer,
-            "strengths": ["Clear communication", "Demonstrated foundational awareness"],
-            "improvements": ["Give concrete code syntax examples", "Address boundary cases and null handling"]
+            "strengths": ["Clear conversational voice", "Attempted the technical prompt"],
+            "improvements": ["Highlight individual 'I' code ownership", "Include concrete numbers, metrics, or edge cases"]
         }
 
 
@@ -726,3 +822,111 @@ Evaluate the answer accurately for a {level_upper} level candidate and generate 
             ],
             "recommended_topics": ["Core Java & OOPs", "SQL Queries & DBMS", "HR & Project Communication"]
         }
+
+    async def generate_warmup_round(
+        self,
+        track: str = "SOFTWARE_ENGINEERING",
+        job_description: Optional[str] = None,
+        candidate_name: Optional[str] = "Candidate"
+    ) -> list:
+        """
+        Generate a Google Interview Warmup 5-question round:
+        - 1 BACKGROUND question
+        - 2 SITUATIONAL questions (STAR method)
+        - 2 TECHNICAL questions
+        """
+        system = """You are Google's Interview Warmup Question Generator.
+Generate exactly 5 interview practice questions for the specified career track following Google's exact pedagogical distribution:
+- Question 1: BACKGROUND (focus on personal background, education, and career motivation)
+- Question 2: SITUATIONAL (behavioral scenario, resolving challenges, teamwork, or pressure - prompts STAR format)
+- Question 3: SITUATIONAL (different behavioral scenario: conflict, changing priorities, or learning from mistakes)
+- Question 4: TECHNICAL (core domain concept, methodology, or system architecture)
+- Question 5: TECHNICAL (practical problem-solving, tools, trade-offs, or troubleshooting)
+
+For each question, return:
+- 'id': unique string id (e.g. 'warmup_bg_1', 'warmup_sit_1')
+- 'category': 'BACKGROUND' | 'SITUATIONAL' | 'TECHNICAL'
+- 'question': the concise, clear interview question prompt
+- 'tips': a 1-sentence guidance tip helping the candidate structure their answer
+- 'jobRelatedTerms': a list of 6-8 industry-specific keywords relevant to a great answer
+- 'talkingPoints': a list of 3 structured points a candidate should touch upon
+
+Return ONLY a valid JSON array of 5 objects matching the schema."""
+
+        prompt = f"""
+Track: {track}
+Candidate Name: {candidate_name}
+Target Role Context / Job Description: {job_description or "Standard industry interview standards"}
+
+Return the 5-question warmup set formatted as a JSON array."""
+
+        raw = await self._call_llm(prompt, system)
+        if raw:
+            match = re.search(r'\[.*\]', raw, re.DOTALL)
+            if match:
+                try:
+                    data = json.loads(match.group())
+                    if isinstance(data, list) and len(data) >= 5:
+                        return data[:5]
+                except Exception:
+                    pass
+
+        # Fallback will return empty list so the frontend curated bank is used seamlessly
+        return []
+
+    async def analyze_warmup_answer(
+        self,
+        question: str,
+        answer_text: str,
+        category: str = "TECHNICAL",
+        track: str = "SOFTWARE_ENGINEERING",
+        target_terms: Optional[list] = None,
+        talking_points: Optional[list] = None
+    ) -> dict:
+        """
+        Google Interview Warmup non-judgmental ML pattern recognition:
+        - Job-related terms detected in answer + contextual suggested terms
+        - Most-used words frequency
+        - Talking points covered checklist
+        - Encouraging coaching tip
+        """
+        system = """You are Google's Interview Warmup AI Coach.
+Analyze the candidate's answer text using non-judgmental pattern recognition. Do NOT give a harsh or punitive score.
+Extract:
+1. 'detectedTerms': list of industry keywords and domain terms the candidate actually used in their answer.
+2. 'suggestedTerms': list of 4-6 relevant industry terms they could have mentioned to enhance their answer.
+3. 'talkingPoints': array of objects { 'point': str, 'covered': bool, 'feedback': str } checking whether they covered the 3 structural talking points.
+4. 'coachingTip': a constructive, encouraging tip on how to elevate their delivery next time.
+
+Return ONLY valid JSON matching this schema:
+{
+  "detectedTerms": ["...", "..."],
+  "suggestedTerms": ["...", "..."],
+  "talkingPoints": [
+    {"point": "...", "covered": true, "feedback": "..."},
+    {"point": "...", "covered": false, "feedback": "..."}
+  ],
+  "coachingTip": "..."
+}"""
+
+        prompt = f"""
+Question: {question}
+Question Category: {category}
+Track: {track}
+Target Talking Points: {json.dumps(talking_points or [])}
+Known Domain Terms: {json.dumps(target_terms or [])}
+Candidate's Answer: {answer_text}
+
+Analyze the answer text and return the JSON insights."""
+
+        raw = await self._call_llm(prompt, system)
+        if raw:
+            match = re.search(r'\{.*\}', raw, re.DOTALL)
+            if match:
+                try:
+                    return json.loads(match.group())
+                except Exception:
+                    pass
+
+        return {}
+

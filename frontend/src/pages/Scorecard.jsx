@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { PROBE_TYPE_META, getPersonaById } from '../utils/questionBank';
 import styles from './Scorecard.module.css';
 
 const ScoreRing = ({ score, label, color }) => {
@@ -130,6 +131,54 @@ export default function Scorecard({ scoreData, onHome }) {
 
   const verdictMeta = getVerdictStyle(verdict);
 
+  const persona = getPersonaById(scoreData?.interviewer_persona || 'STRICT_CAMPUS');
+
+  const dimScores = scoreData?.dimension_scores || {
+    structure: Math.round((clarity_score || 8) * 10),
+    specificity: Math.round((technical_depth_score || 72) * 0.9),
+    ownership: 78,
+    technical_rigor: Math.round(technical_depth_score || depth_score || 75),
+    delivery: Math.min(100, Math.max(30, 85 - (filler_word_count || 0) * 4)),
+  };
+
+  const rubricPillars = [
+    {
+      name: 'Structure & Method',
+      score: dimScores.structure || 75,
+      color: '#2563eb',
+      icon: '📐',
+      desc: 'Opening thesis, logical progression & structured conclusions.',
+    },
+    {
+      name: 'Quantifiable Specificity',
+      score: dimScores.specificity || 68,
+      color: '#0284c7',
+      icon: '📊',
+      desc: 'Concrete numbers, scale, user volume, and measurable results.',
+    },
+    {
+      name: 'Individual Ownership',
+      score: dimScores.ownership || 78,
+      color: '#7c3aed',
+      icon: '🎯',
+      desc: 'Clarified "I" code contribution & schema design vs generic "we".',
+    },
+    {
+      name: 'Technical Rigor',
+      score: dimScores.technical_rigor || 74,
+      color: '#d97706',
+      icon: '⚙️',
+      desc: 'Memory footprint, complexity, internal mechanics & syntax depth.',
+    },
+    {
+      name: 'Delivery & Composure',
+      score: dimScores.delivery || 82,
+      color: '#059669',
+      icon: '🎙️',
+      desc: 'Fluent pacing, confident tone, and low filler word usage.',
+    },
+  ];
+
   const handleCopy = (text, index) => {
     navigator.clipboard.writeText(text);
     setCopiedIndex(index);
@@ -239,6 +288,9 @@ export default function Scorecard({ scoreData, onHome }) {
           <div className={styles.headerLeft}>
             <div className={styles.badgeRow}>
               <span className={styles.pillBadge}>✨ Official AI Assessment</span>
+              <span className={styles.personaHeaderPill} style={{ color: persona.accentColor, borderColor: `${persona.accentColor}40` }}>
+                {persona.badge} · {persona.company}
+              </span>
               <span className={styles.sessionMetaBadge}>
                 {questionsAnswered || (history ? history.length : 0)} questions · Duration: {formatDuration(duration)}
               </span>
@@ -280,6 +332,42 @@ export default function Scorecard({ scoreData, onHome }) {
             Session finalized with local performance analysis. Complete report shown below.
           </p>
         )}
+
+        {/* 🎯 5-Dimension Competency Rubric (Final Round AI Standard) */}
+        <div className={styles.rubricCard}>
+          <div className={styles.rubricHeader}>
+            <div className={styles.rubricTitleGroup}>
+              <span className={styles.rubricIcon}>🎯</span>
+              <h3 className={styles.rubricTitle}>5-Dimension Placement Competency Rubric</h3>
+            </div>
+            <span className={styles.rubricBadge}>Final Round AI Standard</span>
+          </div>
+
+          <div className={styles.rubricGrid}>
+            {rubricPillars.map((pillar, i) => (
+              <div key={i} className={styles.rubricItem}>
+                <div className={styles.rubricLabelGroup}>
+                  <span className={styles.rubricLabel}>
+                    <span>{pillar.icon}</span> {pillar.name}
+                  </span>
+                  <span className={styles.rubricScore} style={{ color: pillar.color }}>
+                    {pillar.score}/100
+                  </span>
+                </div>
+                <div className={styles.rubricBarTrack}>
+                  <div
+                    className={styles.rubricBarFill}
+                    style={{
+                      width: `${Math.min(100, Math.max(5, pillar.score))}%`,
+                      backgroundColor: pillar.color,
+                    }}
+                  />
+                </div>
+                <p className={styles.rubricDesc}>{pillar.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
 
         {/* 📋 Official Panel Assessment Debrief */}
         {rationaleDebrief && (
@@ -495,7 +583,27 @@ export default function Scorecard({ scoreData, onHome }) {
               {history.map((item, idx) => (
                 <div key={idx} className={styles.qaCard}>
                   <div className={styles.qaTop}>
-                    <span className={styles.qIndexBadge}>Question {idx + 1}</span>
+                    <div className={styles.qaBadgeGroup}>
+                      <span className={styles.qIndexBadge}>
+                        {item.conversational_turn && item.conversational_turn > 0
+                          ? `Probe Turn ${item.conversational_turn}/2`
+                          : `Question ${idx + 1}`}
+                      </span>
+                      {item.probe_type && PROBE_TYPE_META[item.probe_type] && item.conversational_turn > 0 && (
+                        <span
+                          className={styles.probeBadgeMini}
+                          style={{
+                            backgroundColor: `${PROBE_TYPE_META[item.probe_type].color}15`,
+                            color: PROBE_TYPE_META[item.probe_type].color,
+                            borderColor: `${PROBE_TYPE_META[item.probe_type].color}35`,
+                          }}
+                          title={PROBE_TYPE_META[item.probe_type].description}
+                        >
+                          {PROBE_TYPE_META[item.probe_type].icon} {PROBE_TYPE_META[item.probe_type].label}
+                        </span>
+                      )}
+                    </div>
+
                     {item.ai_score !== undefined && (
                       <span
                         className={styles.qaScoreBadge}
@@ -510,6 +618,13 @@ export default function Scorecard({ scoreData, onHome }) {
                     )}
                   </div>
 
+                  {/* Active Listening Anchor Banner */}
+                  {item.active_listening_anchor && item.conversational_turn > 0 && (
+                    <div className={styles.anchorPillReview}>
+                      <span>👂 Panel Anchored on:</span> <em>"{item.active_listening_anchor}"</em>
+                    </div>
+                  )}
+
                   <h4 className={styles.questionHeading}>{item.question}</h4>
 
                   {/* Candidate's Answer */}
@@ -522,6 +637,17 @@ export default function Scorecard({ scoreData, onHome }) {
                     </div>
                     <p className={styles.answerText}>{item.answer_text || 'No response recorded.'}</p>
                   </div>
+
+                  {/* Dimension scores mini chips */}
+                  {item.dimension_scores && (
+                    <div className={styles.dimScoresMini}>
+                      <span className={styles.dimChip}>📐 Structure: {item.dimension_scores.structure}%</span>
+                      <span className={styles.dimChip}>📊 Specificity: {item.dimension_scores.specificity}%</span>
+                      <span className={styles.dimChip}>🎯 Ownership: {item.dimension_scores.ownership}%</span>
+                      <span className={styles.dimChip}>⚙️ Rigor: {item.dimension_scores.technical_rigor}%</span>
+                      <span className={styles.dimChip}>🎙️ Delivery: {item.dimension_scores.delivery}%</span>
+                    </div>
+                  )}
 
                   {/* AI Feedback */}
                   {item.aiFeedback && (
