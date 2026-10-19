@@ -65,7 +65,7 @@ const EXPERIENCE_LEVELS = [
   },
 ];
 
-export default function LandingPage({ onStart }) {
+export default function LandingPage({ onStart, onOpenMenu }) {
   const [selectedType, setSelectedType] = useState('TECHNICAL');
   const [experienceLevel, setExperienceLevel] = useState('JUNIOR');
   const [name, setName] = useState('');
@@ -174,8 +174,26 @@ export default function LandingPage({ onStart }) {
         {/* Glassmorphic Navigation Bar */}
         <header className={styles.navbar}>
           <div className={styles.navContainer}>
-            <div className={styles.logo}>
-              Placement Prep<sup className={styles.supRegistered}>®</sup>
+            <div className={styles.navLeftGroup}>
+              {onOpenMenu && (
+                <button
+                  type="button"
+                  className={`liquid-glass ${styles.navHamburgerBtn}`}
+                  onClick={onOpenMenu}
+                  aria-label="Open navigation menu"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="3" y1="12" x2="21" y2="12" />
+                    <line x1="3" y1="6" x2="21" y2="6" />
+                    <line x1="3" y1="18" x2="21" y2="18" />
+                  </svg>
+                  <span className={styles.navHamburgerLabel}>Menu</span>
+                </button>
+              )}
+
+              <div className={styles.logo}>
+                Placement Prep<sup className={styles.supRegistered}>®</sup>
+              </div>
             </div>
 
             <nav className={styles.navLinks}>

@@ -24,6 +24,9 @@ export default function App() {
     return localStorage.getItem('prep_reduce_effects') === 'true';
   });
 
+  // Mobile/Drawer Navigation Open State
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('prep_theme', theme);
@@ -100,6 +103,9 @@ export default function App() {
           onToggleTheme={toggleTheme}
           reduceEffects={reduceEffects}
           onToggleReduceEffects={toggleReduceEffects}
+          isOpen={isMenuOpen}
+          onClose={() => setIsMenuOpen(false)}
+          showFloatingButton={page !== 'landing'}
         />
       )}
 
@@ -114,7 +120,12 @@ export default function App() {
           position: 'relative',
         }}
       >
-        {page === 'landing' && <LandingPage onStart={startInterview} />}
+        {page === 'landing' && (
+          <LandingPage
+            onStart={startInterview}
+            onOpenMenu={() => setIsMenuOpen(true)}
+          />
+        )}
         {page === 'interview' && (
           <InterviewRoom
             sessionData={sessionData}

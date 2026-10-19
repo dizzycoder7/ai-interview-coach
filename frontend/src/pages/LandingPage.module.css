@@ -47,10 +47,50 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1.5rem 2rem 1.5rem clamp(4.2rem, 5.5vw, 6.2rem);
+  padding: 1.35rem 2rem;
   max-width: 80rem; /* max-w-7xl */
   margin: 0 auto;
   width: 100%;
+}
+
+.navLeftGroup {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.navHamburgerBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.95rem;
+  border-radius: var(--radius-pill);
+  color: hsl(var(--foreground));
+  font-size: 0.84rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: transform 0.2s ease, background 0.2s ease;
+  user-select: none;
+}
+
+.navHamburgerBtn:hover {
+  transform: scale(1.04);
+}
+
+.navHamburgerLabel {
+  font-size: 0.82rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+@media (max-width: 580px) {
+  .navHamburgerLabel {
+    display: none;
+  }
+  .navHamburgerBtn {
+    padding: 0.5rem;
+    border-radius: 10px;
+  }
 }
 
 .logo {

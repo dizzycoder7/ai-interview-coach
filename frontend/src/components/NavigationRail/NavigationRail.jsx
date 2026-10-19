@@ -10,19 +10,25 @@ export default function NavigationRail({
   onToggleReduceEffects,
   isInInterview,
   onExitInterview,
+  isOpen: controlledIsOpen,
+  onClose: controlledOnClose,
+  showFloatingButton = true,
 }) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isOpen = controlledIsOpen !== undefined ? controlledIsOpen : internalOpen;
+  const handleClose = controlledOnClose || (() => setInternalOpen(false));
+  const handleOpen = () => setInternalOpen(true);
 
   // Close drawer on Escape key press
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape' && isOpen) {
-        setIsOpen(false);
+        handleClose();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen]);
+  }, [isOpen, handleClose]);
 
   const navItems = [
     {
@@ -84,26 +90,28 @@ export default function NavigationRail({
 
   return (
     <>
-      {/* Floating Hamburger Trigger Button */}
-      <button
-        type="button"
-        className={`liquid-glass ${styles.hamburgerBtn}`}
-        onClick={() => setIsOpen(true)}
-        aria-label="Open navigation menu"
-        aria-expanded={isOpen}
-      >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <line x1="3" y1="12" x2="21" y2="12" />
-          <line x1="3" y1="6" x2="21" y2="6" />
-          <line x1="3" y1="18" x2="21" y2="18" />
-        </svg>
-        <span className={styles.hamburgerLabel}>Menu</span>
-      </button>
+      {/* Floating Hamburger Trigger Button (used when not integrated into the page navbar) */}
+      {showFloatingButton && (
+        <button
+          type="button"
+          className={`liquid-glass ${styles.hamburgerBtn}`}
+          onClick={handleOpen}
+          aria-label="Open navigation menu"
+          aria-expanded={isOpen}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
+          <span className={styles.hamburgerLabel}>Menu</span>
+        </button>
+      )}
 
       {/* Backdrop Overlay */}
       <div
         className={`${styles.backdrop} ${isOpen ? styles.backdropVisible : ''}`}
-        onClick={() => setIsOpen(false)}
+        onClick={handleClose}
         aria-hidden="true"
       />
 
@@ -122,7 +130,7 @@ export default function NavigationRail({
             <button
               type="button"
               className={styles.closeBtn}
-              onClick={() => setIsOpen(false)}
+              onClick={handleClose}
               aria-label="Close navigation menu"
             >
               ✕
@@ -141,7 +149,7 @@ export default function NavigationRail({
                   className={`${styles.navButton} ${isActive ? styles.navButtonActive : ''}`}
                   onClick={() => {
                     onSelectTab(item.id);
-                    setIsOpen(false);
+                    handleClose();
                   }}
                   aria-current={isActive ? 'page' : undefined}
                 >
