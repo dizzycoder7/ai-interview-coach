@@ -8,7 +8,7 @@ const ScoreRing = ({ score, label, color }) => {
   return (
     <div className={styles.scoreRing}>
       <svg width="84" height="84" viewBox="0 0 80 80">
-        <circle cx="40" cy="40" r="30" fill="none" stroke="rgba(255, 255, 255, 0.08)" strokeWidth="6" />
+        <circle cx="40" cy="40" r="30" fill="none" stroke="var(--color-lines)" strokeWidth="6" />
         <circle
           cx="40"
           cy="40"
@@ -21,11 +21,10 @@ const ScoreRing = ({ score, label, color }) => {
           strokeLinecap="round"
           transform="rotate(-90 40 40)"
           style={{
-            transition: 'stroke-dashoffset 1s ease',
-            filter: `drop-shadow(0 0 6px ${color})`,
+            transition: 'stroke-dashoffset 0.8s ease',
           }}
         />
-        <text x="40" y="46" textAnchor="middle" fill="#f8fafc" fontSize="16" fontWeight="900" fontFamily="var(--font-mono)">
+        <text x="40" y="46" textAnchor="middle" fill="var(--color-ink)" fontSize="16" fontWeight="700" fontFamily="var(--font-sans)">
           {pct}
         </text>
       </svg>
@@ -42,6 +41,14 @@ export default function Scorecard({ scoreData, onHome }) {
   const toggleSprintItem = (idx) => {
     setCheckedItems((prev) => ({ ...prev, [idx]: !prev[idx] }));
   };
+
+  // Ensure video element volume is set to max and unmuted
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.volume = 1.0;
+      videoRef.current.muted = false;
+    }
+  }, [scoreData?.recordingUrl]);
 
   if (!scoreData) return null;
   const {
@@ -70,14 +77,6 @@ export default function Scorecard({ scoreData, onHome }) {
     error,
   } = scoreData;
 
-  // Ensure video element volume is set to max and unmuted
-  useEffect(() => {
-    if (videoRef.current) {
-      videoRef.current.volume = 1.0;
-      videoRef.current.muted = false;
-    }
-  }, [recordingUrl]);
-
   const formatDuration = (s) => {
     if (!s) return '0m 0s';
     const m = Math.floor(s / 60);
@@ -87,7 +86,9 @@ export default function Scorecard({ scoreData, onHome }) {
 
   const totalWords = history ? history.reduce((acc, h) => acc + (h.answer_text ? h.answer_text.trim().split(/\s+/).filter(Boolean).length : 0), 0) : 0;
   const isNearlyEmpty = totalWords < 12;
-  const verdict = isNearlyEmpty ? 'NO HIRE' : (hiring_verdict || (overall_score >= 85 ? 'STRONG HIRE' : overall_score >= 70 ? 'HIRE' : overall_score >= 55 ? 'LEAN HIRE' : 'NO HIRE'));
+  const verdict = isNearlyEmpty
+    ? 'Not yet'
+    : (hiring_verdict || (overall_score >= 70 ? 'Ready' : overall_score >= 50 ? 'Almost' : 'Not yet'));
 
   const displayScore = isNearlyEmpty
     ? (overall_score && overall_score <= 25 ? Math.round(overall_score) : 15)
@@ -95,8 +96,12 @@ export default function Scorecard({ scoreData, onHome }) {
 
   const rationaleDebrief = hiring_decision_rationale || (
     isNearlyEmpty
-      ? `NO HIRE (Definitive Committee Consensus). Candidate spoke virtually nothing (${totalWords} words total recorded) or terminated prematurely. In an engineering hiring interview, silence or skipping questions results in an immediate failing evaluation with zero demonstrated evidence of technical problem-solving ability.`
-      : `Based on your interview responses, the hiring committee has evaluated your performance with respect to engineering depth, system design, and communication.`
+      ? `Not yet (Campus Placement Assessment). Candidate spoke virtually nothing (${totalWords} words total recorded) or terminated prematurely. In an IT campus placement interview, silence or skipping questions indicates unpreparedness. Daily practice answering technical questions aloud is strongly advised.`
+      : (displayScore >= 70
+        ? `Ready for campus placements. The candidate demonstrated solid understanding of core concepts with clear communication and good project awareness.`
+        : displayScore >= 50
+        ? `Almost ready. The candidate understands fundamental concepts but needs practice delivering complete code examples, structured answers, and confident project walkthroughs.`
+        : `Not yet ready. The candidate has conceptual gaps in core subjects (Java, OOPs, SQL) and needs structured revision and mock practice before campus drives.`)
   );
 
   const displayRedFlags = (red_flags && red_flags.length > 0)
@@ -104,21 +109,22 @@ export default function Scorecard({ scoreData, onHome }) {
     : (isNearlyEmpty
       ? [
           `Provided virtually no verbal or technical explanation (${totalWords} words spoken in total)`,
-          'Failed to explain architecture, trade-offs, or algorithmic complexity',
+          'Failed to answer core questions or explain project logic',
           'Interview ended prematurely without answering the prompt',
         ]
       : null);
 
   const getVerdictStyle = (v) => {
     switch (v) {
+      case 'Ready':
       case 'STRONG HIRE':
-        return { label: 'STRONG HIRE', color: '#34d399', bg: 'rgba(16, 185, 129, 0.12)', border: 'rgba(16, 185, 129, 0.4)', icon: '🏆', glow: 'rgba(16, 185, 129, 0.25)' };
       case 'HIRE':
-        return { label: 'HIRE', color: '#38bdf8', bg: 'rgba(14, 165, 233, 0.12)', border: 'rgba(14, 165, 233, 0.4)', icon: '✅', glow: 'rgba(14, 165, 233, 0.25)' };
+        return { label: 'Ready', color: 'var(--color-good)', bg: 'var(--color-good-bg)', border: 'var(--color-good-border)', icon: '✅' };
+      case 'Almost':
       case 'LEAN HIRE':
-        return { label: 'LEAN HIRE', color: '#fbbf24', bg: 'rgba(245, 158, 11, 0.12)', border: 'rgba(245, 158, 11, 0.4)', icon: '⚠️', glow: 'rgba(245, 158, 11, 0.25)' };
+        return { label: 'Almost', color: 'var(--color-warning)', bg: 'var(--color-warning-bg)', border: 'var(--color-warning-border)', icon: '⚠️' };
       default:
-        return { label: 'NO HIRE', color: '#f87171', bg: 'rgba(239, 68, 68, 0.12)', border: 'rgba(239, 68, 68, 0.4)', icon: '❌', glow: 'rgba(239, 68, 68, 0.25)' };
+        return { label: 'Not yet', color: 'var(--color-bad)', bg: 'var(--color-bad-bg)', border: 'var(--color-bad-border)', icon: '❌' };
     }
   };
 
@@ -198,7 +204,7 @@ export default function Scorecard({ scoreData, onHome }) {
             <span>💡</span> <strong>Everyday Analogy (ELI5):</strong>
           </div>
           <p className={styles.subText}>
-            Think of this problem like an airport baggage claim system where items are categorized into specific conveyor belts so passengers retrieve them in O(1) constant time without searching every bag in chaos.
+            Think of this concept like an everyday organized system (e.g., a university library index or a bank token queue). Instead of searching every shelf or line blindly, standard rules and organized categories make the lookup fast, predictable, and error-free.
           </p>
         </div>
         <div className={styles.modelSubSection}>
@@ -206,9 +212,9 @@ export default function Scorecard({ scoreData, onHome }) {
             <span>🏆</span> <strong>10/10 Gold Standard Interview Script:</strong>
           </div>
           <p className={styles.subText}>
-            1. Direct Thesis: 'The critical objective is decoupling ingest throughput from processing latency.'<br />
-            2. Mechanism: 'I would implement this using an in-memory ring buffer with O(1) reads and writes, backed by an asynchronous persistence log.'<br />
-            3. Trade-offs: 'The trade-off is potential uncommitted loss during hard node crashes, which we mitigate via dual-zone replication and write-ahead logging.'
+            1. Crisp Definition: Clearly define the core principle (e.g., OOP pillars, Java Collection choice, or SQL Join) in 1-2 concise sentences.<br />
+            2. How It Works in Code: State the specific class, interface, or query syntax with a clean example from your coursework or final-year project.<br />
+            3. Best Practices & Edge Cases: Explain null checks, boundary conditions, and why this design is maintainable in enterprise projects.
           </p>
         </div>
         <div className={styles.modelSubSection}>
@@ -216,9 +222,9 @@ export default function Scorecard({ scoreData, onHome }) {
             <span>🔍</span> <strong>What Your Answer Was Missing:</strong>
           </div>
           <p className={styles.subText}>
-            • You provided virtually no technical explanation or architecture.<br />
-            • Time and space complexity was completely omitted.<br />
-            • No trade-offs or production failure modes were mentioned.
+            • Provide a concrete code or query example to demonstrate hands-on understanding.<br />
+            • Clearly mention your final-year project architecture and your personal contribution.<br />
+            • Address boundary cases (null checks, empty inputs) proactively.
           </p>
         </div>
       </div>
@@ -237,9 +243,9 @@ export default function Scorecard({ scoreData, onHome }) {
                 {questionsAnswered || (history ? history.length : 0)} questions · Duration: {formatDuration(duration)}
               </span>
             </div>
-            <h1 className={styles.title}>Hiring Committee Performance Debrief</h1>
+            <h1 className={styles.title}>Campus Placement Performance Debrief</h1>
             <p className={styles.subtitle}>
-              Brutally candid evaluation of technical competence, delivery, filler words, and question-by-question master answers.
+              Clear evaluation of technical fundamentals, problem solving, project understanding, and communication.
             </p>
           </div>
 
@@ -255,7 +261,7 @@ export default function Scorecard({ scoreData, onHome }) {
             >
               <span className={styles.verdictIcon}>{verdictMeta.icon}</span>
               <div className={styles.verdictTextGroup}>
-                <span className={styles.verdictPre}>HIRING VERDICT</span>
+                <span className={styles.verdictPre}>Placement readiness</span>
                 <span className={styles.verdictMain}>{verdictMeta.label}</span>
               </div>
             </div>
@@ -275,12 +281,12 @@ export default function Scorecard({ scoreData, onHome }) {
           </p>
         )}
 
-        {/* 📋 Official Hiring Committee Rationale Debrief */}
+        {/* 📋 Official Panel Assessment Debrief */}
         {rationaleDebrief && (
           <div className={styles.rationaleCard}>
             <div className={styles.rationaleHeader}>
-              <span className={styles.rationaleIcon}>⚖️</span>
-              <h3 className={styles.rationaleTitle}>Hiring Committee Deliberation</h3>
+              <span className={styles.rationaleIcon}>📋</span>
+              <h3 className={styles.rationaleTitle}>Panel Assessment & Recommendations</h3>
             </div>
             <p className={styles.rationaleText}>{rationaleDebrief}</p>
           </div>
@@ -340,7 +346,7 @@ export default function Scorecard({ scoreData, onHome }) {
               />
               <ScoreRing
                 score={isNearlyEmpty ? (system_design_score || 10) : (system_design_score || 72)}
-                label="System Design"
+                label="Problem Solving"
                 color="#7c3aed"
               />
               <ScoreRing
@@ -479,7 +485,7 @@ export default function Scorecard({ scoreData, onHome }) {
               <div>
                 <h3 className={styles.qaSectionTitle}>💡 Question-by-Question Analysis & Master Model Answers</h3>
                 <p className={styles.sectionSub}>
-                  Compare your response against an exemplary Staff Engineer answer, intuitive ELI5 analogies, and specific missing trade-offs.
+                  Compare your response against an exemplary model answer, intuitive analogies, and specific missing points.
                 </p>
               </div>
               <span className={styles.qaCounterBadge}>{history.length} Questions Reviewed</span>

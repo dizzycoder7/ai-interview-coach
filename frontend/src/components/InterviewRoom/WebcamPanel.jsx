@@ -167,7 +167,10 @@ export default function WebcamPanel({ onEmotionData, onEyeContactScore, onStream
         )}
 
         {camStatus === 'active' && (
-          <div className={styles.liveBadge}>● LIVE</div>
+          <div className={styles.recordingPrivacyBadge}>
+            <span className={styles.recDot} />
+            <span>Recording, not uploaded</span>
+          </div>
         )}
       </div>
 

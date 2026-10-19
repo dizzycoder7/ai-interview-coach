@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, Union, Any
 from services.llm_service import LLMService
 
 router = APIRouter()
@@ -13,7 +13,7 @@ class StartInterviewRequest(BaseModel):
     experience_level: Optional[str] = "JUNIOR"  # JUNIOR, MID, SENIOR
 
 class EvaluateAnswerRequest(BaseModel):
-    session_id: str
+    session_id: Union[str, int]
     question: str
     answer_text: str
     interview_type: str
@@ -22,7 +22,7 @@ class EvaluateAnswerRequest(BaseModel):
     experience_level: Optional[str] = "JUNIOR"  # JUNIOR, MID, SENIOR
 
 class ScoreSessionRequest(BaseModel):
-    session_id: str
+    session_id: Union[str, int]
     qa_pairs: list
     emotion_data: Optional[dict] = None
     eye_contact_score: Optional[float] = None

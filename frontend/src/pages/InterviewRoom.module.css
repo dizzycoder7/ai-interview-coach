@@ -1,283 +1,307 @@
+/* ==========================================================================
+   Interview Room Styles
+   Clean, un-zoomed, focused layout (fits screen without vertical clutter)
+   ========================================================================== */
+
 .room {
   height: 100vh;
+  width: 100%;
   display: flex;
   flex-direction: column;
-  background: var(--bg-dark);
-  background-image: 
-    radial-gradient(circle at 15% 10%, rgba(139, 92, 246, 0.08) 0%, transparent 40%),
-    radial-gradient(circle at 85% 85%, rgba(6, 182, 212, 0.06) 0%, transparent 40%),
-    linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
-  background-size: 100% 100%, 100% 100%, 40px 40px, 40px 40px;
+  background-color: var(--color-bg);
+  color: var(--color-ink);
   overflow: hidden;
-  color: var(--text-primary);
+  box-sizing: border-box;
 }
 
 /* ==========================================================================
-   Cockpit Header
+   Single Consolidated Executive Header (50px height)
    ========================================================================== */
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.65rem 1.5rem;
-  background: rgba(13, 17, 28, 0.85);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0 1.25rem;
+  background-color: var(--color-surface);
+  border-bottom: 1px solid var(--color-lines);
   flex-shrink: 0;
-  height: 58px;
+  height: 50px;
   position: relative;
   z-index: 10;
+  box-sizing: border-box;
 }
 
 .headerLeft {
   display: flex;
   align-items: center;
-  gap: 0.85rem;
+  gap: 0.65rem;
 }
 
-.logoGroup {
+.brandGroup {
   display: flex;
   align-items: center;
-  gap: 0.45rem;
+  gap: 0.4rem;
 }
 
-.logoIcon {
-  font-size: 1.1rem;
-  color: #38bdf8;
-  filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.8));
+.brandDot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background-color: var(--color-good);
 }
 
-.logo {
-  font-weight: 800;
-  font-size: 0.88rem;
-  color: var(--text-primary);
-  letter-spacing: 0.06em;
-  font-family: var(--font-mono);
+.brandTitle {
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--color-ink);
+  letter-spacing: -0.01em;
 }
 
 .sessionBadge {
-  background: rgba(139, 92, 246, 0.12);
-  color: #c084fc;
-  font-size: 0.68rem;
-  font-weight: 700;
-  padding: 0.2rem 0.65rem;
-  border-radius: 20px;
-  border: 1px solid rgba(139, 92, 246, 0.3);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-family: var(--font-mono);
+  background-color: var(--color-surface-sunken);
+  color: var(--color-ink);
+  font-size: 0.72rem;
+  font-weight: 500;
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-card);
+  border: 1px solid var(--color-lines);
+  text-transform: none;
 }
 
 .levelBadge {
-  background: rgba(6, 182, 212, 0.12);
-  color: #38bdf8;
-  font-size: 0.68rem;
-  font-weight: 800;
-  padding: 0.2rem 0.65rem;
-  border-radius: 20px;
-  border: 1px solid rgba(6, 182, 212, 0.35);
-  letter-spacing: 0.05em;
-  font-family: var(--font-mono);
+  background-color: var(--color-good-bg);
+  color: var(--color-good);
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-card);
+  border: 1px solid var(--color-good-border);
+  text-transform: none;
 }
 
-.resumeBadge {
-  background: rgba(16, 185, 129, 0.1);
-  color: #34d399;
-  font-size: 0.68rem;
-  font-weight: 700;
-  padding: 0.2rem 0.65rem;
-  border-radius: 20px;
-  border: 1px solid rgba(16, 185, 129, 0.3);
-  letter-spacing: 0.03em;
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  font-family: var(--font-mono);
-}
-
+/* Unified Question Progress & Pacing Countdown */
 .headerCenter {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-}
-
-.timerContainer {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  background: rgba(255, 255, 255, 0.04);
+}
+
+.pacingPill {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  background-color: var(--color-surface-sunken);
+  border: 1px solid var(--color-lines);
   padding: 0.25rem 0.85rem;
-  border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.timerDot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #38bdf8;
-  box-shadow: 0 0 8px #38bdf8;
-  animation: pulse 1s infinite;
-}
-
-.timer {
-  font-size: 0.95rem;
-  font-weight: 700;
+  border-radius: var(--radius-pill);
+  font-size: 0.78rem;
   font-family: var(--font-mono);
-  color: var(--text-primary);
-  letter-spacing: 0.08em;
 }
 
+.questionIndexText {
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+.pacingDivider {
+  color: var(--color-muted);
+}
+
+.pacingTrackMini {
+  width: 80px;
+  height: 4px;
+  background-color: var(--color-lines);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+
+.pacingFillMini {
+  height: 100%;
+  border-radius: var(--radius-pill);
+  transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+.pacingTimerText {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Right Header Controls */
 .headerRight {
   display: flex;
   align-items: center;
-  gap: 0.85rem;
-}
-
-.codeBtn {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: var(--text-primary);
-  border-radius: var(--radius-sm);
-  padding: 0.4rem 0.85rem;
-  font-size: 0.78rem;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  transition: all 0.2s ease;
-  cursor: pointer;
-}
-
-.codeBtn:hover {
-  background: rgba(139, 92, 246, 0.15);
-  border-color: rgba(139, 92, 246, 0.4);
-  color: #c084fc;
-}
-
-.hudTelemetry {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  background: rgba(255, 255, 255, 0.03);
-  padding: 0.35rem 0.75rem;
-  border-radius: var(--radius-sm);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.qCount {
-  font-size: 0.75rem;
-  font-weight: 800;
-  color: var(--text-secondary);
-  font-family: var(--font-mono);
-  letter-spacing: 0.05em;
-}
-
-.statusDot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--text-muted);
-  transition: all 0.3s;
-}
-
-.statusLive {
-  background: #ef4444;
-  box-shadow: 0 0 10px #ef4444;
-  animation: pulse 1.2s infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.4; transform: scale(1.15); }
-}
-
-/* ==========================================================================
-   Main Layout & Panels
-   ========================================================================== */
-.main {
-  display: flex;
-  flex: 1;
-  gap: 1rem;
-  padding: 1rem;
-  overflow: hidden;
-  min-height: 0;
-}
-
-.leftPanel {
-  width: 290px;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.85rem;
-}
-
-/* Telemetry Metrics */
-.metrics {
-  display: flex;
   gap: 0.65rem;
 }
 
-.metric {
-  flex: 1;
-  background: rgba(15, 20, 32, 0.75);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: var(--radius-md);
-  padding: 0.85rem 0.75rem;
+.codeBtn {
+  font-size: 0.8rem;
+  font-weight: 500;
+  padding: 0.3rem 0.75rem;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-lines);
+  border-radius: var(--radius-card);
+  color: var(--color-ink);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.codeBtn:hover {
+  background-color: var(--color-surface-hover);
+}
+
+.iconBtn {
+  font-size: 0.85rem;
+  padding: 0.3rem 0.65rem;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-lines);
+  border-radius: var(--radius-card);
+  color: var(--color-ink);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.iconBtn:hover {
+  background-color: var(--color-surface-hover);
+}
+
+.endBtn {
+  background-color: var(--color-bad-bg);
+  border: 1px solid var(--color-bad-border);
+  color: var(--color-bad);
+  border-radius: var(--radius-card);
+  padding: 0.35rem 0.85rem;
+  font-size: 0.8rem;
+  font-weight: 600;
   display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-  text-align: center;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  align-items: center;
+  gap: 0.35rem;
+  transition: opacity var(--transition-fast);
+  cursor: pointer;
+  white-space: nowrap;
 }
 
-.metricLabel {
-  font-size: 0.64rem;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  font-weight: 700;
-  font-family: var(--font-mono);
+.endBtn:hover:not(:disabled) {
+  opacity: 0.85;
 }
 
-.metricValue {
-  font-size: 1.35rem;
-  font-weight: 900;
-  font-family: var(--font-mono);
-  letter-spacing: -0.02em;
+.endBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
-.metricBar {
+.spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--color-bad-border);
+  border-top-color: var(--color-bad);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: inline-block;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ==========================================================================
+   Main Grid Layout (280px Left Column + 1fr Center Stage)
+   ========================================================================== */
+.main {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  height: calc(100vh - 50px);
+  overflow: hidden;
+  max-width: 1440px;
+  margin: 0 auto;
   width: 100%;
-  height: 3px;
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 2px;
-  overflow: hidden;
-  margin-top: 0.2rem;
+  box-sizing: border-box;
 }
 
-.metricFill {
-  height: 100%;
-  border-radius: 2px;
-  transition: width 0.4s ease, background 0.4s ease;
+@media (max-width: 900px) {
+  .main {
+    grid-template-columns: 1fr;
+    overflow-y: auto;
+    height: auto;
+  }
 }
 
-.metricSub {
-  font-size: 0.62rem;
-  color: var(--text-muted);
-  font-family: var(--font-mono);
-}
-
-/* Center Panel */
-.centerPanel {
-  flex: 1;
+/* ==========================================================================
+   Left Column: Candidate Monitor (Webcam + Telemetry in 1 unified card)
+   ========================================================================== */
+.leftPanel {
   display: flex;
   flex-direction: column;
-  gap: 0.85rem;
+  width: 280px;
+  flex-shrink: 0;
+}
+
+.candidateCard {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-lines);
+  border-radius: var(--radius-card);
   overflow: hidden;
-  min-height: 0;
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+}
+
+.telemetryGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.45rem;
+  padding: 0.65rem;
+  background-color: var(--color-surface);
+  border-top: 1px solid var(--color-lines);
+}
+
+.telemetryItem {
+  background-color: var(--color-surface-sunken);
+  border: 1px solid var(--color-lines);
+  border-radius: var(--radius-card);
+  padding: 0.45rem 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.telemetryLabel {
+  font-size: 0.68rem;
+  color: var(--color-muted);
+  font-weight: 500;
+}
+
+.telemetryValue {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--color-ink);
+  line-height: 1.2;
+}
+
+.telemetryTarget {
+  font-size: 0.68rem;
+  color: var(--color-muted);
+  font-weight: 400;
+}
+
+.telemetryValueGood {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-good);
+}
+
+/* ==========================================================================
+   Center Column: Dialogue Stage (AI Question + Verbal Answer + Controls)
+   ========================================================================== */
+.centerPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  overflow-y: auto;
+  padding-right: 0.2rem;
 }

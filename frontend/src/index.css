@@ -1,79 +1,240 @@
+/* ==========================================================================
+   Campus Placement Practice Room - Design System Tokens
+   Cinematic Fullscreen Hero + Calm Placement Practice Room Tokens
+   ========================================================================== */
+
 :root {
-  --bg-dark: #090d16;
-  --bg-subtle: #0d1322;
-  --bg-card: rgba(18, 24, 38, 0.8);
-  --bg-card-hover: rgba(26, 35, 54, 0.9);
-  --bg-card-solid: #111827;
-  
-  --accent-primary: #8b5cf6;
-  --accent-secondary: #06b6d4;
-  --accent-gradient: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 50%, #06b6d4 100%);
-  --accent-green: #10b981;
-  --accent-red: #f43f5e;
-  --accent-yellow: #f59e0b;
-  
-  --text-primary: #f8fafc;
-  --text-secondary: #cbd5e1;
-  --text-muted: #94a3b8;
-  --text-dim: #64748b;
-  
-  --border: rgba(255, 255, 255, 0.08);
-  --border-accent: rgba(139, 92, 246, 0.35);
-  --border-glow: rgba(6, 182, 212, 0.4);
-  
-  --shadow-card: 0 16px 40px -10px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.06);
-  --shadow-glow: 0 0 35px -5px rgba(139, 92, 246, 0.3);
-  --shadow-glow-cyan: 0 0 30px -5px rgba(6, 182, 212, 0.3);
-  
-  --radius-sm: 8px;
-  --radius-md: 14px;
-  --radius-lg: 24px;
-  --font-main: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  /* Cinematic Dark Theme HSL Tokens */
+  --background: 201 100% 13%;
+  --foreground: 0 0% 100%;
+  --muted-foreground: 240 4% 66%;
+  --primary: 0 0% 100%;
+  --primary-foreground: 0 0% 4%;
+  --secondary: 0 0% 10%;
+  --muted: 0 0% 10%;
+  --accent: 0 0% 10%;
+  --border: 0 0% 18%;
+  --input: 0 0% 18%;
+
+  /* Typography */
+  --font-display: 'Instrument Serif', Georgia, serif;
+  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-serif: Georgia, 'Times New Roman', serif;
+  --font-sans: var(--font-body);
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+
+  /* Practice Room Tokens (Default Dark / Cinematic Navy Palette) */
+  --color-bg: hsl(201 100% 13%);
+  --color-surface: #14213d;
+  --color-surface-hover: #1c2b4d;
+  --color-surface-sunken: #0b1526;
+  --color-ink: hsl(0 0% 100%);
+  --color-muted: hsl(240 4% 66%);
+  --color-good: #34D399;
+  --color-good-bg: rgba(52, 211, 153, 0.12);
+  --color-good-border: rgba(52, 211, 153, 0.3);
+  --color-warning: #FBBF24;
+  --color-warning-bg: rgba(251, 191, 36, 0.12);
+  --color-warning-border: rgba(251, 191, 36, 0.3);
+  --color-bad: #F87171;
+  --color-bad-bg: rgba(248, 113, 113, 0.12);
+  --color-bad-border: rgba(248, 113, 113, 0.3);
+  --color-lines: rgba(255, 255, 255, 0.14);
+  --color-focus: #38bdf8;
+
+  /* Geometry & Borders */
+  --radius-card: 12px;
+  --radius-sm: 6px;
+  --radius-pill: 9999px;
+  --border-card: 1px solid var(--color-lines);
+
+  /* Elevation */
+  --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.25);
+  --shadow-elevated: 0 12px 36px rgba(0, 0, 0, 0.4);
+
+  /* Reading Length */
+  --max-line-length: 75ch;
+
+  /* Motion Defaults */
+  --transition-fast: 150ms ease;
+  --transition-normal: 240ms ease;
 }
 
-* {
+[data-theme='light'] {
+  --color-bg: #EEF1F4;
+  --color-surface: #FFFFFF;
+  --color-surface-hover: #F8FAFC;
+  --color-surface-sunken: #E4E8EE;
+  --color-ink: #14213D;
+  --color-muted: #5B6679;
+  --color-good: #0F766E;
+  --color-good-bg: #E6F4F1;
+  --color-good-border: #99F6E4;
+  --color-warning: #B7791F;
+  --color-warning-bg: #FEF7EC;
+  --color-warning-border: #FDE68A;
+  --color-bad: #B42318;
+  --color-bad-bg: #FEF3F2;
+  --color-bad-border: #FECACA;
+  --color-lines: #D5DBE3;
+  --color-focus: #0F766E;
+  --shadow-card: 0 1px 3px rgba(20, 33, 61, 0.05);
+  --shadow-elevated: 0 4px 12px rgba(20, 33, 61, 0.08);
+}
+
+/* ==========================================================================
+   CSS Reset & Accessibility
+   ========================================================================== */
+*, *::before, *::after {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
-
 html, body {
-  height: 100%;
-  background: var(--bg-dark);
-  color: var(--text-primary);
-  font-family: var(--font-main);
+  min-height: 100%;
+  width: 100%;
+  background-color: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.6;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 #root {
-  height: 100%;
+  min-height: 100%;
+  width: 100%;
+}
+
+/* Headings use clean, legible typography, sentence case */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-body);
+  color: var(--color-ink);
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+  text-transform: none;
+}
+
+p, li, span, label {
+  max-width: var(--max-line-length);
 }
 
 a {
-  color: var(--accent-primary);
+  color: inherit;
   text-decoration: none;
 }
 
 button {
   cursor: pointer;
-  font-family: var(--font-main);
+  font-family: var(--font-body);
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 0.95rem;
 }
 
+/* Visible Keyboard Focus (WCAG AA) */
+:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+/* ==========================================================================
+   Liquid Glass Effect
+   ========================================================================== */
+.liquid-glass {
+  background: rgba(255, 255, 255, 0.01);
+  background-blend-mode: luminosity;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border: none;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1);
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.25s ease, background 0.25s ease, box-shadow 0.25s ease;
+}
+
+.liquid-glass::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.4px;
+  background: linear-gradient(180deg,
+    rgba(255,255,255,0.45) 0%, rgba(255,255,255,0.15) 20%,
+    rgba(255,255,255,0) 40%, rgba(255,255,255,0) 60%,
+    rgba(255,255,255,0.15) 80%, rgba(255,255,255,0.45) 100%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.liquid-glass:hover {
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.2), 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+/* ==========================================================================
+   Animations
+   ========================================================================== */
+@keyframes fade-rise {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-rise {
+  animation: fade-rise 0.8s ease-out both;
+}
+
+.animate-fade-rise-delay {
+  animation: fade-rise 0.8s ease-out 0.2s both;
+}
+
+.animate-fade-rise-delay-2 {
+  animation: fade-rise 0.8s ease-out 0.4s both;
+}
+
+/* Reduced Motion Compliance */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.reduced-effects *,
+.reduced-effects *::before,
+.reduced-effects *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
+/* Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: #090d16;
+  background: var(--color-bg);
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 4px;
+  background: var(--color-lines);
+  border-radius: var(--radius-sm);
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: var(--color-muted);
 }
-

@@ -2,6 +2,7 @@ import os
 import json
 import re
 import asyncio
+import random
 from typing import Optional
 import google.generativeai as genai
 from openai import AsyncOpenAI
@@ -115,34 +116,28 @@ class LLMService:
         if level_upper in ["FRESHER", "BEGINNER"]:
             level_upper = "JUNIOR"
 
-        if level_upper == "JUNIOR":
-            system = """You are an encouraging, highly professional Technical Interviewer conducting an interview for a Junior / Fresher / Entry-Level Software Engineer (0-2 years experience).
-Your mission is to ask an opening question focused on CORE FUNDAMENTALS and the candidate's actual resume projects.
+        if interview_type.upper() in ["BEHAVIORAL", "HR"]:
+            system = """You are an HR panel member from an Indian IT services company's campus placement drive (evaluating freshers for companies like TCS, Infosys, Wipro, Cognizant, Accenture, Capgemini).
+The candidate is a final-year B.Tech student or a fresher.
+Cover self-introduction, strengths and weaknesses, teamwork, handling pressure, willingness to relocate and work in shifts, willingness to learn, and project contribution.
+Use simple, clear English. Ask one question at a time. Follow up on the candidate's own words. Be polite but firm.
 
-LEVEL SPECIFICATIONS FOR JUNIOR / FRESHER:
-- CORE TOPICS: Core Java, OOPs concepts (Encapsulation, Inheritance, Polymorphism, Abstraction), Collections Framework (ArrayList vs LinkedList, HashMap internals), Spring Boot fundamentals (Annotations, Dependency Injection, Controller/Service/Repository layers), and Relational Databases / MySQL (Joins, Keys, Indexing, Normalization).
-- RESUME PROJECTS GROUNDING: If candidate resume text or project highlights are provided, inspect their projects and ask a question specifically about what THEY built (e.g. "I see you built a [Project Name] with Spring Boot and MySQL. How did you design your database schema, and how did you implement the REST endpoints?").
-- STRICT PROHIBITION: DO NOT ask senior system design, microservice partitioning, CAP theorem, distributed consensus, or 100k RPS rate limiters. Keep questions focused on code logic, fundamentals, and their resume projects.
-- Include a helpful hint/tip in 'tips' to guide the candidate on how to structure their response.
+Include a helpful hint/tip in 'tips' to guide the candidate on how to structure their response.
 
-Return ONLY valid JSON matching this schema:
-{
-  "question": "...",
-  "tips": "..."
-}"""
-        elif level_upper == "MID":
-            system = """You are a Senior Engineering Interviewer evaluating a Mid-Level Software Engineer (2-5 years experience).
-Focus on practical engineering design, REST API best practices, concurrency, ORM/Hibernate optimizations, indexing strategies, unit testing, and design patterns.
-If a resume is provided, probe their architectural decisions and feature implementations from their past projects.
 Return ONLY valid JSON matching this schema:
 {
   "question": "...",
   "tips": "..."
 }"""
         else:
-            system = """You are a Principal Staff Engineer evaluating a Senior / Lead Engineer (5+ years experience).
-Focus on distributed systems, high-availability architecture, failure modes, scalability trade-offs, and strategic engineering decisions.
-If a resume is provided, probe system architecture and scale metrics from their past work.
+            system = """You are a panel member from an Indian IT services company's campus placement drive. The candidate is a final-year B.Tech student or a fresher.
+Ask about Core Java, OOPs, Collections, DBMS and SQL, basic data structures, aptitude-style logic, and the candidate's final-year project.
+Use simple, clear English. Ask one question at a time. Follow up on the candidate's own words. Do not ask system design or distributed systems questions. Be polite but firm.
+
+If candidate resume text or project highlights are provided, inspect their project and ask an opening question specifically about what THEY built in their project (e.g. "I see you built a [Project Name]. What was your specific role, and what database did you use?").
+
+Include a helpful hint/tip in 'tips' to guide the candidate on how to structure their response.
+
 Return ONLY valid JSON matching this schema:
 {
   "question": "...",
@@ -217,50 +212,109 @@ Formulate an opening question tailored specifically to this candidate, their tar
                 ]
             }
 
-        if level_upper == "JUNIOR":
-            system = """You are a constructive, highly skilled Technical Interviewer evaluating a Junior / Fresher / Entry-Level Software Engineer (0-2 years experience).
-Evaluate the candidate's answer fairly based on foundational understanding, clarity, and practical code/logic examples.
+        # STRICT REPETITION CHECK: If candidate repeated phrases or vocabulary diversity is low
+        lower_words = [re.sub(r'[^a-z0-9]', '', w.lower()) for w in words if len(w) > 1]
+        unique_ratio = len(set(lower_words)) / max(1, len(lower_words))
+        trigrams = {}
+        for i in range(len(lower_words) - 2):
+            tri = f"{lower_words[i]} {lower_words[i+1]} {lower_words[i+2]}"
+            trigrams[tri] = trigrams.get(tri, 0) + 1
+        max_tri_freq = max(trigrams.values()) if trigrams else 0
+
+        if (unique_ratio < 0.45 and word_count >= 25) or max_tri_freq >= 3:
+            return {
+                "score": 2,
+                "feedback": f"Failing score (2/10): High repetition detected. The response repeats introductory phrases ({max_tri_freq} repetitions of identical phrases) with only {int(unique_ratio*100)}% unique words. It lacks structured technical depth and concrete project examples. In an IT campus placement drive (TCS, Infosys, Wipro, Accenture), avoid repeating greetings. Deliver a crisp introduction, state your final-year project title and tech stack, and explain your personal contribution.",
+                "follow_up_question": "Let's reset and test your Core Java fundamentals: In Java, can you explain the difference between Method Overloading and Method Overriding with a short code example?",
+                "improved_answer": (
+                    f"💡 Everyday Analogy (ELI5):\n"
+                    f"Think of an interview introduction like a resume summary. You have 30 seconds to tell the panel who you are, what you built, and what technologies you know.\n\n"
+                    f"🏆 The 10/10 Gold Standard Interview Script:\n"
+                    f"1. Crisp Introduction: 'Thank you for having me. My name is [Name], final-year B.Tech Computer Science student at [University].'\n"
+                    f"2. Final-Year Project: 'My project is [Project Name], developed using Core Java, Spring Boot, and MySQL. My role focused on designing the REST APIs and database schema.'\n"
+                    f"3. Why IT Services: 'I want to start my career with an IT services company because of the structured foundational training and opportunity to work on enterprise client projects.'\n\n"
+                    f"🔍 What Your Answer Was Missing:\n"
+                    f"• High phrase repetition with no structured technical details.\n"
+                    f"• Did not mention project architecture or technologies used.\n"
+                    f"• Did not address the question about joining an IT services firm."
+                ),
+                "strengths": ["Spoke aloud and attempted the response"],
+                "improvements": [
+                    "Eliminate repetitive phrases and introductory loops",
+                    "Clearly state project title, tech stack (Java/SQL), and your role",
+                    "Structure your answer into 3 distinct parts"
+                ]
+            }
+
+        if interview_type.upper() in ["BEHAVIORAL", "HR"]:
+            system = """You are an HR panel member from an Indian IT services company's campus placement drive evaluating a final-year B.Tech student or fresher.
+Score as a recruiter would for a fresher. Judge correctness, clarity, examples and honesty about what the candidate knows. Do not expect senior-level depth. Return JSON only.
+Cover self-introduction, strengths and weaknesses, teamwork, handling pressure, willingness to relocate and work in shifts, willingness to learn, and project contribution.
+Use simple, clear English. Ask one question at a time. Follow up on the candidate's own words. Be polite but firm.
+
+STRICT REPETITION AND SUBSTANCE CHECK:
+- If the candidate's answer is repetitive, echoes greetings, lacks structured points, or does not provide concrete examples, score MUST NOT exceed 2-3 out of 10.
+- Never award a high score (7-10) for raw length or word count if the text is repetitive or lacks substance.
 
 SCORING GUIDELINES (1 to 10):
-- 1-4: Fundamental misconceptions, incorrect syntax/logic, or unable to explain basic principles.
-- 5-6: Knows standard textbook definition, but lacks practical examples or struggles to explain how it works in code.
-- 7-8: Good conceptual clarity, gave solid examples (Java classes, OOP concepts, Spring annotations, SQL queries), understands why and how it works.
-- 9-10: Exceptional clarity, proactively explains edge cases (e.g. null checks, boundary conditions), best practices, and clean code principles.
-
-ADAPTIVE FOLLOW-UP RULES FOR JUNIOR:
-- Deeply analyze what the candidate actually said in their answer.
-- Ask a follow-up that tests deeper comprehension of the fundamental concept or connects directly to their resume projects.
-  * Examples: "How does HashMap handle collisions when two keys have the same hashcode?", "What is the difference between @Autowired and Constructor Injection in Spring Boot?", "Can you explain how an INNER JOIN differs from a LEFT JOIN with a query example?", "In your resume project, how did you handle data validation before saving into MySQL?"
-- STRICT PROHIBITION: DO NOT ask about distributed consensus, network partitions, split-brain, CAP theorem, or high-scale system design. Keep it focused on core code, OOP, Spring Boot, MySQL, and their resume projects.
+- 1-4: Incoherent, evasive, silent, repetitive loops, or unable to communicate basic thoughts.
+- 5-6: Generic answers without concrete examples, but polite and willing to learn.
+- 7-8: Clear, confident answers with genuine college/project examples and positive attitude.
+- 9-10: Exceptional clarity, excellent examples (teamwork, handling pressure, adaptability), and strong communication.
 
 MASTER MODEL ANSWER RULES ('improved_answer'):
-Deliver an exemplary 3-part masterclass explanation designed for clarity:
+Deliver an exemplary 3-part explanation:
+Part 1: 💡 Everyday Analogy (ELI5): A simple real-world analogy.
+Part 2: 🏆 Gold Standard Answer Script: How a top fresher structures their response (Situation -> Action -> Learning/Result).
+Part 3: 🔍 What Your Answer Was Missing: Direct, encouraging bullet points on what was missing.
+
+Return ONLY valid JSON matching this schema:
+{
+  "score": 7,
+  "feedback": "Constructive feedback from the HR recruiter...",
+  "follow_up_question": "Next HR or project question following up on what they said...",
+  "improved_answer": "💡 Everyday Analogy (ELI5):\n...\n\n🏆 Gold Standard Answer Script:\n...\n\n🔍 What Your Answer Was Missing:\n...",
+  "strengths": ["...", "..."],
+  "improvements": ["...", "..."]
+}"""
+        else:
+            system = """You are a panel member from an Indian IT services company's campus placement drive.
+The candidate is a final-year B.Tech student or a fresher.
+Score as a recruiter would for a fresher. Judge correctness, clarity, examples and honesty about what the candidate knows. Do not expect senior-level depth. Return JSON only.
+Ask about Core Java, OOPs, Collections, DBMS and SQL, basic data structures, aptitude-style logic, and the candidate's final-year project.
+Use simple, clear English. Ask one question at a time. Follow up on the candidate's own words. Do not ask system design or distributed systems questions. Be polite but firm.
+
+STRICT REPETITION AND SUBSTANCE CHECK:
+- If the candidate's answer is repetitive, repeats introductory greetings, lacks structured points, or does not provide concrete examples, score MUST NOT exceed 2-3 out of 10.
+- Never award a high score (7-10) for raw length or word count if the text is repetitive or lacks substance.
+
+SCORING GUIDELINES (1 to 10):
+- 1-4: Fundamental misconceptions, repetitive loops, incorrect syntax/logic, or unable to explain basic principles.
+- 5-6: Knows standard textbook definition, but lacks practical examples or struggles to explain how it works in code.
+- 7-8: Good conceptual clarity, gave solid examples (Java classes, OOP concepts, basic SQL queries), understands why and how it works.
+- 9-10: Exceptional clarity, proactively explains edge cases (e.g. null checks, boundary conditions), clean code, and solid understanding of their project.
+
+ADAPTIVE FOLLOW-UP RULES:
+- Deeply analyze what the candidate actually said in their answer.
+- Ask a follow-up that tests deeper comprehension of the fundamental concept or connects directly to their final-year project.
+  * Examples: "How does HashMap handle collisions in Java?", "What is the difference between @Autowired and Constructor Injection?", "Can you explain how an INNER JOIN differs from a LEFT JOIN with a query example?", "In your final-year project, how did you handle data validation and database storage?"
+- STRICT PROHIBITION: DO NOT ask system design, microservices, or complex distributed systems questions. Keep questions focused on code logic, fundamentals, and their project.
+
+MASTER MODEL ANSWER RULES ('improved_answer'):
+Deliver an exemplary 3-part explanation:
 Part 1: 💡 Everyday Analogy (ELI5): A crystal-clear real-world metaphor that anyone can understand in 10 seconds.
-Part 2: 🏆 10/10 Gold Standard Interview Script: The exact, structured answer an exemplary developer gives (crisp definition -> code structure/internal mechanics -> edge cases & best practices).
+Part 2: 🏆 Gold Standard Answer Script: The exact, structured answer an exemplary candidate gives (crisp definition -> code structure/internal mechanics -> edge cases & best practices).
 Part 3: 🔍 What Your Answer Was Missing: Direct, honest bullet points highlighting what the candidate omitted, assumed, or stated incorrectly.
 
 Return ONLY valid JSON matching this schema:
 {
   "score": 7,
   "feedback": "Constructive evaluation citing specific strengths and gaps...",
-  "follow_up_question": "Follow-up question testing deeper understanding of the fundamental topic or resume project...",
-  "improved_answer": "💡 Everyday Analogy (ELI5):\n...\n\n🏆 The 10/10 Gold Standard Interview Script:\n...\n\n🔍 What Your Answer Was Missing:\n...",
+  "follow_up_question": "Follow-up question testing deeper understanding of the fundamental topic or project...",
+  "improved_answer": "💡 Everyday Analogy (ELI5):\n...\n\n🏆 Gold Standard Answer Script:\n...\n\n🔍 What Your Answer Was Missing:\n...",
   "strengths": ["...", "..."],
   "improvements": ["...", "..."]
 }"""
-        else:
-            system = f"""You are a rigorous Engineering Interviewer evaluating a {level_upper} Software Engineer.
-Score strictly from 1 to 10 based on production engineering hiring bars.
-Probe their design decisions, trade-offs, scalability, and edge cases.
-Return ONLY valid JSON matching this schema:
-{{
-  "score": 7,
-  "feedback": "Honest evaluation...",
-  "follow_up_question": "Challenging follow-up...",
-  "improved_answer": "💡 Everyday Analogy (ELI5):\n...\n\n🏆 The 10/10 Gold Standard Interview Script:\n...\n\n🔍 What Your Answer Was Missing:\n...",
-  "strengths": ["...", "..."],
-  "improvements": ["...", "..."]
-}}"""
 
         resume_snippet = f"\nCandidate Resume Highlights:\n{resume_text[:1500]}" if resume_text and len(resume_text.strip()) > 30 else ""
 
@@ -298,15 +352,15 @@ Evaluate the answer accurately for a {level_upper} level candidate and generate 
 
         # If candidate spoke almost nothing, gave empty answers, or terminated early:
         if not qa_pairs or not has_substantive or total_words < 12:
-            print(f"Enforcing strict NO HIRE: total_words={total_words}, qa_pairs_count={len(qa_pairs)}")
+            print(f"Enforcing Not yet: total_words={total_words}, qa_pairs_count={len(qa_pairs)}")
             return {
                 "overall_score": 15,
-                "hiring_verdict": "NO HIRE",
+                "hiring_verdict": "Not yet",
                 "hiring_decision_rationale": (
-                    f"NO HIRE (Definitive Committee Consensus). The candidate spoke virtually nothing substantive "
+                    f"Not yet (Campus Placement Assessment). The candidate spoke virtually nothing substantive "
                     f"(recording only {total_words} words total across the entire session) or terminated prematurely. "
-                    "In a live technical or behavioral interview, staying silent, skipping questions, or providing empty responses "
-                    "results in an immediate failing verdict. There is zero demonstrated evidence of engineering or architectural competency."
+                    "In an IT campus placement interview, staying silent, skipping questions, or providing empty responses "
+                    "indicates a lack of preparation. The candidate must actively speak aloud and attempt questions."
                 ),
                 "technical_depth_score": 10,
                 "system_design_score": 10,
@@ -315,64 +369,61 @@ Evaluate the answer accurately for a {level_upper} level candidate and generate 
                 "confidence_score": 15,
                 "clarity_score": 15,
                 "depth_score": 10,
-                "ai_summary": f"Session concluded with non-substantive answers ({total_words} words recorded). Failed hiring bar.",
+                "ai_summary": f"Session concluded with non-substantive answers ({total_words} words recorded). Needs thorough preparation.",
                 "red_flags": [
                     f"Provided virtually no technical explanation ({total_words} words spoken in total)",
-                    "Failed to address the core problem constraints or architecture",
-                    "Session ended without demonstrating engineering problem-solving ability"
+                    "Did not attempt the core interview questions",
+                    "Session ended without demonstrating problem-solving ability"
                 ],
-                "top_strengths": ["Started the mock interview session"],
+                "top_strengths": ["Attended the campus placement mock interview"],
                 "key_improvements": [
-                    "Must actively speak and deliver complete technical solutions",
-                    "Do not end or skip questions without stating your thought process aloud",
-                    "Study standard data structures, algorithmic complexity, and system design"
+                    "Must actively speak and deliver complete solutions aloud",
+                    "Do not end or skip questions without stating your thought process",
+                    "Revise Core Java, OOPs concepts, and SQL basics"
                 ],
                 "action_plan": [
-                    "Practice speaking aloud for at least 2 minutes per technical question",
-                    "Use the STAR method (Situation, Task, Action, Result) for behavioral questions",
-                    "Review core computer science fundamentals and trade-offs"
+                    "Practice speaking aloud for at least 1-2 minutes per question",
+                    "Prepare clear answers for self-introduction and final-year project",
+                    "Review basic data structures and database queries"
                 ],
-                "recommended_topics": ["CS Fundamentals", "Interview Communication", "System Design Basics"]
+                "recommended_topics": ["Core Java Fundamentals", "SQL Queries", "Interview Communication"]
             }
 
-        system = """You are the Lead of a Silicon Valley Hiring Committee (Google/Meta/Stripe caliber).
-        Synthesize the candidate's entire interview into a brutally honest, high-signal debrief.
+        system = """You are the Lead Interview Evaluator for an Indian IT services campus placement drive (evaluating freshers for companies like TCS, Infosys, Wipro, Cognizant, Accenture, Capgemini).
+        Synthesize the candidate's entire interview into a constructive, realistic placement readiness assessment.
 
-        Determine the definitive HIRING VERDICT:
-        - "STRONG HIRE" (Average QA score >= 8.5, rigorous depth, clear presence)
-        - "HIRE" (Average QA score 7.0 - 8.4, solid fundamentals, minor gaps)
-        - "LEAN HIRE" (Average QA score 5.5 - 6.9, passable but lacks architectural depth)
-        - "NO HIRE" (Average QA score < 5.5, superficial answers, or critical misunderstandings)
+        Score as a recruiter would for a fresher. Judge correctness, clarity, examples and honesty about what the candidate knows. Do not expect senior-level depth. Return JSON only.
 
-        CRITICAL HIRING BAR RULES:
-        1. If the candidate answers are brief, generic, or lack technical rigor, the verdict MUST BE "NO HIRE" or "LEAN HIRE".
-        2. NEVER return 'HIRE' or 'STRONG HIRE' for an incomplete or low-effort interview.
+        Determine the definitive PLACEMENT READINESS VERDICT:
+        - "Ready" (Overall score >= 70): Solid fundamentals in Core Java, OOPs, DBMS/SQL, clear communication, and good project understanding.
+        - "Almost" (Overall score 50 to 69): Knows basic definitions but lacks code examples, project depth, or confident delivery.
+        - "Not yet" (Overall score < 50): Significant conceptual gaps, silent or incomplete answers, needs revision before campus drives.
 
         Return ONLY valid JSON matching this schema:
         {
-          "overall_score": 78,
-          "hiring_verdict": "HIRE",
-          "hiring_decision_rationale": "Candid 2-3 paragraph hiring committee debrief explaining the verdict...",
-          "technical_depth_score": 76,
-          "system_design_score": 72,
-          "communication_score": 82,
+          "overall_score": 75,
+          "hiring_verdict": "Ready",
+          "hiring_decision_rationale": "Constructive 2-3 paragraph placement assessment explaining why the candidate is Ready, Almost, or Not yet...",
+          "technical_depth_score": 75,
+          "system_design_score": 70,
+          "communication_score": 80,
           "presence_score": 80,
-          "confidence_score": 78,
-          "clarity_score": 82,
+          "confidence_score": 75,
+          "clarity_score": 80,
           "depth_score": 75,
-          "ai_summary": "Executive summary...",
+          "ai_summary": "Placement readiness summary...",
           "red_flags": [
-            "Hand-waved cache invalidation strategy",
-            "Relied on filler words under technical pressure"
+            "Struggled with method overriding vs overloading in Java",
+            "Hesitated when explaining final-year project architecture"
           ],
-          "top_strengths": ["Structured problem breakdown", "Strong grasp of relational schemas"],
-          "key_improvements": ["Must proactively state time and space complexity", "Deepen understanding of distributed consensus"],
+          "top_strengths": ["Clear explanation of OOP encapsulation", "Good willingness to learn new technologies"],
+          "key_improvements": ["Practice writing SQL joins and queries", "Be more specific when describing personal contributions to team project"],
           "action_plan": [
-            "Study CAP theorem and practical quorum configurations",
-            "Practice mock answers under 2-minute time constraints to prevent rambling",
-            "Review concurrent data structures (ConcurrentHashMap, atomic primitives)"
+            "Revise Core Java Collections (ArrayList vs LinkedList, HashMap)",
+            "Prepare a crisp 2-minute pitch for your final-year project",
+            "Practice answering HR questions on relocation and shift flexibility"
           ],
-          "recommended_topics": ["System Design", "Distributed Transactions", "Concurrency Primitives"]
+          "recommended_topics": ["Core Java & OOPs", "SQL Queries & Normalization", "HR & Project Communication"]
         }"""
 
         qa_summary = "\n".join([f"Q: {qa.get('question','')[:120]} | A: {qa.get('answer_text','')[:160]}" for qa in qa_pairs[:8]])
@@ -381,7 +432,7 @@ Evaluate the answer accurately for a {level_upper} level candidate and generate 
         {qa_summary}
         Candidate Stats: Total Words Spoken: {total_words}, Eye contact: {eye_contact_score or 80}%, Total Fillers: {filler_word_count}
 
-        Generate the complete hiring committee debrief JSON.
+        Generate the complete campus placement debrief JSON.
         """
         raw = await self._call_llm(prompt, system)
         if raw:
@@ -405,47 +456,70 @@ Evaluate the answer accurately for a {level_upper} level candidate and generate 
         if level_upper in ["FRESHER", "BEGINNER"]:
             level_upper = "JUNIOR"
 
-        if level_upper == "JUNIOR":
-            questions = {
-                "TECHNICAL": {
-                    "question": f"Welcome {candidate_name}! Let's start with foundational Object-Oriented Programming (OOP) and Core Java: Could you explain the 4 pillars of OOP (Encapsulation, Inheritance, Polymorphism, Abstraction) and give a practical code example of Method Overloading vs Method Overriding?",
+        pools = {
+            "TECHNICAL": [
+                {
+                    "question": f"Welcome {candidate_name}! To start our placement technical round: Could you explain the 4 core pillars of Object-Oriented Programming (Encapsulation, Inheritance, Polymorphism, Abstraction) and give a practical Java code example of Method Overloading vs Method Overriding?",
                     "tips": "Provide clear real-world examples (like a Vehicle or Payment hierarchy). Mention compile-time vs runtime polymorphism."
                 },
-                "BEHAVIORAL": {
-                    "question": f"Hi {candidate_name}! Walk me through a key software project mentioned in your resume or college portfolio. What was the goal of the project, what technologies did you choose, and what was the most challenging technical bug you encountered and resolved?",
-                    "tips": "Use the STAR method (Situation, Task, Action, Result). Highlight your personal contribution and debugging thought process."
+                {
+                    "question": f"Hello {candidate_name}! In Core Java, could you explain the internal working of a HashMap under the hood? Specifically, how do hashCode, buckets, equals(), and collision resolution work during put() and get()?",
+                    "tips": "Walk through step-by-step what happens when adding a key-value pair, collision handling, and average time complexity."
                 },
-                "CODING": {
-                    "question": f"Hello {candidate_name}! In Java and Data Structures, could you explain how a HashMap works internally under the hood? Specifically, how do hashcode, buckets, equals(), and collision resolution work during put() and get()?",
-                    "tips": "Walk through step-by-step what happens when adding a key-value pair, collision handling (chaining), and average vs worst-case time complexity."
+                {
+                    "question": f"Welcome {candidate_name}! In DBMS and SQL, what is the exact difference between Primary Key, Unique Key, and Foreign Key? How does database indexing work, and what are clustered vs non-clustered indexes?",
+                    "tips": "Highlight NULL allowance differences, referential integrity with foreign keys, and B-tree index lookups."
                 },
-                "MIXED": {
-                    "question": f"Welcome {candidate_name}! In backend web development using Spring Boot and MySQL, could you explain the 3-tier architecture (@RestController, @Service, @Repository), and how Dependency Injection (@Autowired) works?",
-                    "tips": "Describe the flow of a client HTTP request through the controller down to the database, and explain why separation of concerns matters."
+                {
+                    "question": f"Hello {candidate_name}! Can you explain the difference between Stack Memory and Heap Memory in Java? How does Java's Garbage Collector determine when an object is eligible for garbage collection?",
+                    "tips": "Mention method frames, local variables on stack, object instances on heap, and GC roots."
+                },
+                {
+                    "question": f"Welcome {candidate_name}! Walk me through the architecture and database schema of your final-year engineering project. What modules did you personally write, and what was the hardest bug you fixed?",
+                    "tips": "Structure your answer: 1) Problem statement, 2) Tech stack & architecture, 3) Your individual contribution, 4) A concrete bug and fix."
                 }
-            }
-            return questions.get(interview_type.upper(), questions["TECHNICAL"])
-
-        # Mid and Senior fallbacks
-        questions = {
-            "TECHNICAL": {
-                "question": f"Welcome {candidate_name}! Let's dive straight into a practical engineering scenario: Imagine your team's API endpoint is experiencing intermittent 504 Gateway Timeouts under a sudden 5x traffic spike. Walk me through your diagnostic process from the load balancer down to the database connection pool, and how you prevent cascading failures.",
-                "tips": "Structure your answer from edge to data tier: check metrics/logs, isolate thread contention vs DB connection pool exhaustion, and suggest circuit breakers."
-            },
-            "BEHAVIORAL": {
-                "question": f"Hi {candidate_name}. Tell me about a time when you and a senior engineer or tech lead had a fundamental disagreement about a critical architectural choice or code design. How did you navigate the conflict, what data did you present, and what was the eventual outcome?",
-                "tips": "Use the STAR framework (Situation, Task, Action, Result). Focus on disagree-and-commit, data-driven reasoning, and business impact."
-            },
-            "CODING": {
-                "question": f"Hello {candidate_name}! Today's engineering challenge: Design an in-memory Rate Limiter that can handle 100,000 requests per second across concurrent worker threads. What algorithmic approach would you select (Token Bucket, Leaky Bucket, or Sliding Window Log), and how do you ensure thread-safety without creating global lock contention?",
-                "tips": "Compare Token Bucket vs Sliding Window Counter. Discuss concurrency controls like AtomicInteger or striped locks."
-            },
-            "MIXED": {
-                "question": f"Welcome {candidate_name}! Walk me through the most technically complex microservice or distributed feature you have engineered. What were the hardest edge cases you encountered regarding latency, data consistency, or failure recovery, and what trade-offs would you make differently today?",
-                "tips": "Emphasize your personal contribution, quantify the scale (RPS, database size), and discuss trade-offs honestly."
-            }
+            ],
+            "BEHAVIORAL": [
+                {
+                    "question": f"Hi {candidate_name}! Could you briefly introduce yourself, tell me about your final-year project, and share why you are interested in starting your career with an IT services company?",
+                    "tips": "Keep your introduction concise (under 2 minutes). Highlight your technical skills, college project role, and enthusiasm to learn."
+                },
+                {
+                    "question": f"Welcome {candidate_name}! Tell me about a time during a college project or group assignment when you faced a disagreement with a teammate. How did you communicate and resolve it?",
+                    "tips": "Use the STAR method: Situation, Task, Action you took, and positive Result."
+                },
+                {
+                    "question": f"Hello {candidate_name}! In IT services, project allocations may require working in rotational shifts or relocating to cities like Pune, Bangalore, or Chennai. How flexible are you with relocation and shift schedules?",
+                    "tips": "Give a clear, enthusiastic, affirmative answer demonstrating flexibility and willingness to learn."
+                }
+            ],
+            "CODING": [
+                {
+                    "question": f"Hello {candidate_name}! If you are given an array of integers and a target sum, how would you find two numbers that add up to the target? Compare the brute-force approach with an optimized HashMap approach.",
+                    "tips": "Mention brute force is O(N^2) time and O(1) space. The HashMap approach stores complement values for O(N) time and O(N) space."
+                },
+                {
+                    "question": f"Welcome {candidate_name}! How would you determine if two given strings are Anagrams of each other (for example, 'listen' and 'silent')? What is the time and space complexity?",
+                    "tips": "Sorting takes O(N log N). Character frequency array runs in O(N) time with O(1) auxiliary space."
+                },
+                {
+                    "question": f"Hi {candidate_name}! In a singly linked list, how can you detect if there is a cycle or loop present? Explain Floyd's Cycle-Finding Algorithm (slow and fast pointers).",
+                    "tips": "Explain the tortoise and hare pointers and why they are guaranteed to meet if a cycle exists."
+                }
+            ],
+            "MIXED": [
+                {
+                    "question": f"Welcome {candidate_name}! Walk me through your final-year engineering project. What problem did it solve, what technologies did you choose, what was your personal contribution, and what was the hardest bug you fixed?",
+                    "tips": "Structure your answer around the project objectives, your specific module, and how you tested the application."
+                },
+                {
+                    "question": f"Hi {candidate_name}! In enterprise software, how do OOP principles like Encapsulation and Abstraction help structure a database-driven application? What is the role of Primary and Foreign Keys in data integrity?",
+                    "tips": "Connect OOP models to database tables, and explain how foreign keys prevent orphaned records."
+                }
+            ]
         }
-        return questions.get(interview_type.upper(), questions["TECHNICAL"])
+        track_pool = pools.get(interview_type.upper(), pools["TECHNICAL"])
+        return random.choice(track_pool)
 
     def _fallback_evaluation(
         self,
@@ -456,75 +530,109 @@ Evaluate the answer accurately for a {level_upper} level candidate and generate 
         resume_text: Optional[str] = None,
         experience_level: str = "JUNIOR"
     ) -> dict:
-        word_count = len(answer.split())
-        score = min(9, max(4, int(4 + (word_count / 18))))
+        words = answer.strip().split()
+        word_count = len(words)
         level_upper = (experience_level or "JUNIOR").upper()
         if level_upper in ["FRESHER", "BEGINNER"]:
             level_upper = "JUNIOR"
 
-        if level_upper == "JUNIOR":
-            junior_follow_ups = [
-                "That's a good foundation. In Core Java, what is the crucial difference between an Interface and an Abstract Class, and when would you choose one over the other?",
-                "In MySQL, could you explain the difference between an INNER JOIN and a LEFT JOIN, and how adding an index on a foreign key improves performance?",
-                "In Spring Boot, how does Dependency Injection benefit unit testing and code decoupling compared to creating object instances manually with the 'new' keyword?",
-                "In your resume projects, how did you handle data validation and error handling for incoming client requests before persisting data to the database?"
-            ]
-            q_idx = len(history) % len(junior_follow_ups)
+        # Check repetition
+        lower_words = [re.sub(r'[^a-z0-9]', '', w.lower()) for w in words if len(w) > 1]
+        unique_ratio = len(set(lower_words)) / max(1, len(lower_words))
+        trigrams = {}
+        for i in range(len(lower_words) - 2):
+            tri = f"{lower_words[i]} {lower_words[i+1]} {lower_words[i+2]}"
+            trigrams[tri] = trigrams.get(tri, 0) + 1
+        max_tri_freq = max(trigrams.values()) if trigrams else 0
 
-            improved_answer = (
-                f"💡 Everyday Analogy (Explain Like I'm 5):\n"
-                f"Think of this concept like an everyday organized system (e.g. a restaurant menu or a library index). "
-                f"Instead of handling every order or book randomly, standard rules and organized categories make it fast, predictable, and error-free.\n\n"
-                f"🏆 The 10/10 Gold Standard Interview Script:\n"
-                f"1. Crisp Definition: Clearly define the core principle in 1-2 concise sentences.\n"
-                f"2. How It Works in Code: Explain the exact mechanism (e.g., classes/interfaces, memory layout, or database query structure) with a concise example.\n"
-                f"3. Best Practices & Edge Cases: Explain common pitfalls (such as NullPointerExceptions, index misses, or memory leaks) and how to prevent them.\n\n"
-                f"🔍 What Your Answer Was Missing:\n"
-                f"• Provide a concrete code or design example to demonstrate practical understanding.\n"
-                f"• Highlight potential edge cases (like null checks or empty collections).\n"
-                f"• Mention why this pattern is preferred over alternatives."
-            )
-
+        # High repetition check
+        if (unique_ratio < 0.45 and word_count >= 25) or max_tri_freq >= 3:
             return {
-                "score": score,
-                "feedback": f"Good effort explaining the concept ({word_count} words). To elevate your answer, include concrete Java/Spring code examples and state edge cases proactively.",
-                "follow_up_question": junior_follow_ups[q_idx],
-                "improved_answer": improved_answer,
-                "strengths": ["Clear communication", "Demonstrated foundational awareness"],
-                "improvements": ["Give concrete code syntax examples", "Address boundary cases and null handling"]
+                "score": 2,
+                "feedback": f"Failing score (2/10): High repetition detected ({word_count} words recorded, but only {int(unique_ratio*100)}% unique words with repeated phrase loops). Introductory greetings were repeated without technical depth or concrete project examples. For IT campus placements (TCS, Infosys, Wipro, Accenture), eliminate repeated phrases, state your final-year project title, tech stack (Java/SQL), and describe what you personally built.",
+                "follow_up_question": "Let's test your Core Java fundamentals: Can you explain the difference between Method Overloading and Method Overriding with a short code example?",
+                "improved_answer": (
+                    f"💡 Everyday Analogy (ELI5):\n"
+                    f"Repeating the greeting leaves no time to explain what product you built. Think of your response as an elevator pitch with 3 crisp points.\n\n"
+                    f"🏆 The 10/10 Gold Standard Interview Script:\n"
+                    f"1. Crisp Introduction: 'Thank you for having me. My name is [Name], final-year B.Tech Computer Science student at [University].'\n"
+                    f"2. Final-Year Project: 'My project is [Project Name], developed using Core Java, Spring Boot, and MySQL. My role focused on designing the REST APIs and database schema.'\n"
+                    f"3. Why IT Services: 'I want to start my career with an IT services company because of the structured foundational training and opportunity to work on large-scale enterprise systems.'\n\n"
+                    f"🔍 What Your Answer Was Missing:\n"
+                    f"• High phrase repetition with no structured technical details.\n"
+                    f"• Did not mention project architecture or technologies used.\n"
+                    f"• Did not address the question about joining an IT services firm."
+                ),
+                "strengths": ["Spoke aloud and attempted the response"],
+                "improvements": ["Eliminate repetitive phrases", "State project title, tech stack, and your role", "Structure your answer into 3 distinct parts"]
             }
 
-        # Senior/Mid fallbacks
-        follow_ups = [
-            "You laid out the primary mechanism, but what happens during a network partition between your service instances and the storage layer? How do you prevent split-brain anomalies?",
-            "What is the exact time and space complexity of this approach, and how does your memory overhead behave when traffic scales by a factor of 10x?",
-            "If this component crashes unexpectedly in production mid-execution, how do you recover state and guarantee at-least-once message processing without duplicating records?",
-            "What specific observability metrics, alerts, and SLOs would you set up in Datadog or Prometheus to detect degradation before users notice?"
-        ]
-        q_idx = len(history) % len(follow_ups)
+        # Short greeting-only or fluff
+        has_tech = bool(re.search(r'(java|sql|oops|class|object|database|project|spring|react|python|api|html|css|table|join|query|controller|backend|frontend|server|method|inheritance|polymorphism|encapsulation|abstraction|hashmap|array|loop)', answer, re.IGNORECASE))
+        if word_count < 30 and not has_tech:
+            return {
+                "score": 3,
+                "feedback": f"Score: 3/10. Polite start, but incomplete answer ({word_count} words). You gave an introductory greeting without discussing your engineering project or core subjects. In IT campus drives, recruiters evaluate whether you can discuss your engineering project and core subjects.",
+                "follow_up_question": "Can you walk me through your final-year engineering project? What technologies did you use and what was your personal contribution?",
+                "improved_answer": (
+                    f"💡 Everyday Analogy (ELI5):\n"
+                    f"A greeting opens the door, but the actual interview begins when you discuss your project and technical skills.\n\n"
+                    f"🏆 Gold Standard Answer Script:\n"
+                    f"Briefly introduce yourself (college, degree), immediately transition to your final-year project architecture, and state why you chose your tech stack.\n\n"
+                    f"🔍 What Your Answer Was Missing:\n"
+                    f"• Final-year project walkthrough, tech stack details, and motivation for IT services."
+                ),
+                "strengths": ["Polite conversational delivery"],
+                "improvements": ["Include project details and technical stack", "Answer all parts of the question"]
+            }
 
-        improved_answer = (
-            f"💡 Everyday Analogy (Explain Like I'm 5):\n"
-            f"Think of this problem like an airport security checkpoint. If every passenger is inspected with an exhaustive full search in a single line, "
-            f"the entire terminal grinds to a halt. Instead, the airport uses multiple specialized lanes: TSA PreCheck for fast verification (caching/fast-path), "
-            f"conveyor belts with automatic sorting (queuing), and a dedicated secondary screening area so problematic bags don't block the main flow.\n\n"
-            f"🏆 The 10/10 Gold Standard Interview Script:\n"
-            f"1. Crisp Definition: 'The core challenge here is isolating throughput bottlenecks while maintaining strict consistency guarantees.'\n"
-            f"2. Architecture & Complexity: 'I would implement this using an asynchronous event-driven pattern with an in-memory sliding window counter. This gives us O(1) time complexity per check and predictable O(K) memory overhead.'\n"
-            f"3. Trade-offs & Production Edge: 'The trade-off is eventual consistency over immediate synchronization. To mitigate node failures, I'd back this with Redis Sentinel and configure client-side circuit breakers to fail open or gracefully degrade if the cluster experiences partition.'\n\n"
-            f"🔍 What Your Answer Was Missing:\n"
-            f"• Lacked explicit mention of time and space complexity ($O(1)$ vs $O(N)$).\n"
-            f"• Did not state the failure mode or fallback strategy if the primary dependency experiences downtime.\n"
-            f"• Could be elevated by discussing proactive metrics and alert thresholds."
-        )
+        # Basic definition without examples vs solid technical answer
+        if not has_tech or word_count < 55:
+            score = 5
+        else:
+            score = min(8, max(6, int(5 + (word_count / 40))))
+
+        junior_follow_ups = [
+            "That's a good foundation. In Core Java, what is the crucial difference between an Interface and an Abstract Class, and when would you choose one over the other?",
+            "In MySQL, could you explain the difference between an INNER JOIN and a LEFT JOIN, and how adding an index on a foreign key improves query speed?",
+            "In Java collections, when would you choose an ArrayList over a LinkedList, and what are their lookup and insertion complexities?",
+            "In your final-year project, how did you handle data validation and error handling for incoming user requests before storing data in the database?"
+        ]
+        q_idx = len(history) % len(junior_follow_ups)
+
+        is_project_q = bool(re.search(r'project|built|role|academic|application|contribution', question, re.I))
+        if is_project_q:
+            improved_answer = (
+                f"💡 Everyday Analogy (Explain Like I'm 5):\n"
+                f"Telling an interviewer 'I built the backend for an assessment app' is like showing just the book cover. "
+                f"Recruiters need to see the chapters—the database schema, REST APIs, and automated evaluation logic you personally wrote.\n\n"
+                f"🏆 10/10 Gold Standard Ready-Made Interview Script:\n"
+                f"\"I developed an Automated Lab Assessment & Coding Practice Web Platform for our university department. Previously, professors had to manually grade every student's lab code, leading to delayed feedback. I handled the backend development using Java, Spring Boot, and MySQL. Specifically, I designed the relational database schema for Students, Tests, and Submissions, built the REST APIs for assignment submissions, and wrote the execution runner that evaluates code against automated test cases with a 2-second timeout to prevent infinite loops. The project was successfully piloted with a batch of 60 students, eliminating manual grading.\"\n\n"
+                f"🔍 What Your Answer Was Missing:\n"
+                f"• Specify the exact technologies used (e.g. Java, Spring Boot, MySQL, REST APIs).\n"
+                f"• Break down 2-3 concrete modules you personally designed and coded.\n"
+                f"• Mention a technical challenge or bug you solved (e.g. execution timeouts or database indexing)."
+            )
+        else:
+            improved_answer = (
+                f"💡 Everyday Analogy (Explain Like I'm 5):\n"
+                f"Think of this concept like an everyday organized system (e.g. a restaurant menu or a university library index). "
+                f"Instead of handling every order or searching every shelf blindly, standard rules and organized categories make the lookup fast, predictable, and error-free.\n\n"
+                f"🏆 10/10 Gold Standard Ready-Made Interview Script:\n"
+                f"State the core definition in 1-2 concise sentences -> show concrete Java code or SQL query syntax -> highlight edge cases (null checks, boundary conditions) -> explain real-world application.\n\n"
+                f"🔍 What Your Answer Was Missing:\n"
+                f"• Provide a concrete code or design example to demonstrate practical understanding.\n"
+                f"• Highlight potential edge cases (like null checks or empty inputs).\n"
+                f"• Connect the concept to how you used it in your project or coursework."
+            )
 
         return {
             "score": score,
-            "feedback": f"Your response addressed the general direction ({word_count} words), but relied on high-level assertions without explicitly walking through memory implications or failure modes. In top-tier interviews, specificity beats generalizations.",
-            "follow_up_question": follow_ups[q_idx],
+            "feedback": f"Good effort explaining the concept ({word_count} words). To elevate your answer, include concrete Java/SQL code examples and state edge cases proactively.",
+            "follow_up_question": junior_follow_ups[q_idx],
             "improved_answer": improved_answer,
-            "strengths": ["Identified core problem components", "Clear, conversational communication style"],
-            "improvements": ["State time and space complexity proactively", "Detail failure modes and boundary edge cases"]
+            "strengths": ["Clear communication", "Demonstrated foundational awareness"],
+            "improvements": ["Give concrete code syntax examples", "Address boundary cases and null handling"]
         }
 
 
@@ -535,11 +643,11 @@ Evaluate the answer accurately for a {level_upper} level candidate and generate 
         if count == 0 or total_words < 12:
             return {
                 "overall_score": 15,
-                "hiring_verdict": "NO HIRE",
+                "hiring_verdict": "Not yet",
                 "hiring_decision_rationale": (
-                    f"NO HIRE (Definitive Committee Consensus). The candidate spoke virtually nothing substantive "
-                    f"({total_words} words recorded) or terminated the interview prematurely. In a live engineering interview, "
-                    "skipping questions or staying silent results in an immediate failing evaluation. There is zero evidence of technical competency."
+                    f"Not yet (Campus Placement Assessment). The candidate spoke virtually nothing substantive "
+                    f"({total_words} words recorded) or terminated the interview prematurely. In an IT campus placement interview, "
+                    "skipping questions or staying silent indicates a need for structured preparation before placement drives."
                 ),
                 "technical_depth_score": 10,
                 "system_design_score": 10,
@@ -548,44 +656,43 @@ Evaluate the answer accurately for a {level_upper} level candidate and generate 
                 "confidence_score": 15,
                 "clarity_score": 15,
                 "depth_score": 10,
-                "ai_summary": f"Session concluded with non-substantive answers ({total_words} words). Failed hiring bar.",
+                "ai_summary": f"Session concluded with non-substantive answers ({total_words} words). Needs practice.",
                 "red_flags": [
                     f"Candidate spoke fewer than 12 words across the session ({total_words} words)",
-                    "Failed to provide any architectural or complexity explanation"
+                    "Failed to provide technical or project explanations"
                 ],
-                "top_strengths": ["Attended mock session"],
+                "top_strengths": ["Attended the campus placement mock session"],
                 "key_improvements": [
                     "Must deliver full technical explanations aloud",
                     "Do not skip questions or terminate early without answering"
                 ],
                 "action_plan": [
                     "Practice answering technical interview questions aloud with a timer",
-                    "Review data structures and system design fundamentals"
+                    "Review Core Java and database fundamentals",
+                    "Prepare self-introduction and final-year project walkthrough"
                 ],
-                "recommended_topics": ["CS Fundamentals", "Interview Communication"]
+                "recommended_topics": ["Core Java Fundamentals", "SQL Queries", "Interview Communication"]
             }
 
         total_score = sum([qa.get("ai_score", 1) for qa in qa_pairs])
         avg_score = round(total_score / count, 1)
 
-        if avg_score >= 8.5:
-            verdict = "STRONG HIRE"
-        elif avg_score >= 7.0:
-            verdict = "HIRE"
-        elif avg_score >= 5.5:
-            verdict = "LEAN HIRE"
+        if avg_score >= 7.0:
+            verdict = "Ready"
+        elif avg_score >= 5.0:
+            verdict = "Almost"
         else:
-            verdict = "NO HIRE"
+            verdict = "Not yet"
 
         tech_depth = min(95, max(15, int(avg_score * 10 + 2)))
-        system_design = min(95, max(15, int(avg_score * 10 - 3)))
+        prob_solving = min(95, max(15, int(avg_score * 10 - 2)))
         comm_score = max(20, 92 - (filler_word_count * 2))
         presence = min(95, max(50, int((eye_contact_score or 80) * 0.95)))
 
         rationale = (
-            f"The candidate completed {count} technical evaluation rounds ({total_words} total words). "
-            f"Hiring Committee Recommendation: {verdict}. "
-            f"{'Demonstrated good problem-solving foundation with areas for architectural depth improvement.' if avg_score >= 7.0 else 'Lacked the requisite technical depth and precision required for senior engineering ownership.'}"
+            f"The candidate completed {count} interview questions ({total_words} total words). "
+            f"Placement Readiness Assessment: {verdict}. "
+            f"{'Demonstrated solid grasp of fundamentals with good potential for campus placement drives.' if avg_score >= 7.0 else 'Understands basic definitions but needs more practice explaining code and project details.' if avg_score >= 5.0 else 'Needs thorough revision of core concepts and communication before attending campus placement drives.'}"
         )
 
         return {
@@ -593,7 +700,7 @@ Evaluate the answer accurately for a {level_upper} level candidate and generate 
             "hiring_verdict": verdict,
             "hiring_decision_rationale": rationale,
             "technical_depth_score": tech_depth,
-            "system_design_score": system_design,
+            "system_design_score": prob_solving,
             "communication_score": comm_score,
             "presence_score": presence,
             "confidence_score": min(95, max(60, int((eye_contact_score or 80) * 0.9))),
@@ -601,21 +708,21 @@ Evaluate the answer accurately for a {level_upper} level candidate and generate 
             "depth_score": tech_depth,
             "ai_summary": f"Completed {count} questions across the mock session with an average rating of {avg_score}/10.",
             "red_flags": [
-                f"Recorded {filler_word_count} filler words during delivery, impacting technical authority",
-                "Did not proactively address edge-case failures or concurrency race conditions"
+                f"Recorded {filler_word_count} filler words during delivery",
+                "Needs to explain code logic and project contribution with greater specificity"
             ],
             "top_strengths": [
-                "Methodical communication with clear sequential reasoning",
-                "Good grasp of system-level paradigms and core concepts"
+                "Good attitude and conversational communication style",
+                "Clear understanding of basic concepts and definitions"
             ],
             "key_improvements": [
-                "Quantify scale and time/space complexity without being prompted",
-                "Elaborate on production fault tolerance, circuit breakers, and backpressure"
+                "Practice writing syntax and explaining code step-by-step",
+                "Structure answers clearly with definitions and examples"
             ],
             "action_plan": [
-                "Practice answering technical prompts using the 3-step format (Thesis -> Mechanics -> Trade-offs)",
-                "Review distributed systems concepts: CAP theorem, distributed locks, and idempotency keys",
+                "Practice answering interview prompts using the 3-step format (Definition -> Code Example -> Best Practices)",
+                "Review Core Java, Collections, and SQL queries (Joins, Aggregations)",
                 "Do timed practice sessions to keep answers under 2 minutes and eliminate filler words"
             ],
-            "recommended_topics": ["System Scalability", "Concurrency & Locking", "Fault Tolerance Patterns"]
+            "recommended_topics": ["Core Java & OOPs", "SQL Queries & DBMS", "HR & Project Communication"]
         }

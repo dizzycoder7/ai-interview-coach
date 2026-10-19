@@ -1,20 +1,23 @@
+/* ==========================================================================
+   Webcam Panel
+   Clean, compact camera preview with prominent privacy tag
+   ========================================================================== */
+
 .panel {
-  background: rgba(15, 20, 32, 0.75);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: var(--radius-md);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-lines);
+  border-radius: var(--radius-card);
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-card);
 }
 
 .videoWrapper {
   position: relative;
   width: 100%;
-  aspect-ratio: 4/3;
-  background: #060911;
+  aspect-ratio: 16/9;
+  background-color: #0b111e;
   overflow: hidden;
 }
 
@@ -25,115 +28,96 @@
   transform: scaleX(-1); /* Mirror */
 }
 
-/* Subtle holographic HUD crosshair overlay */
-.videoWrapper::after {
-  content: '';
-  position: absolute;
-  inset: 12px;
-  border: 1px dashed rgba(255, 255, 255, 0.1);
-  border-radius: 6px;
-  pointer-events: none;
-}
-
 .overlay {
   position: absolute;
   inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(6, 9, 17, 0.85);
+  background-color: rgba(15, 22, 36, 0.85);
   flex-direction: column;
   gap: 0.65rem;
   z-index: 5;
+  padding: 1rem;
+  text-align: center;
 }
 
 .startCamBtn {
-  background: linear-gradient(135deg, #8b5cf6, #6366f1);
+  background-color: var(--color-good);
   color: #ffffff;
-  border: none;
-  padding: 0.65rem 1.25rem;
-  border-radius: var(--radius-sm);
-  font-size: 0.82rem;
-  font-weight: 700;
-  box-shadow: 0 0 20px rgba(139, 92, 246, 0.4);
+  border: 1px solid var(--color-good-border);
+  padding: 0.6rem 1.1rem;
+  border-radius: var(--radius-card);
+  font-size: 0.85rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: opacity var(--transition-fast);
 }
 
 .startCamBtn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 0 25px rgba(139, 92, 246, 0.6);
+  opacity: 0.9;
 }
 
 .camLoader {
-  width: 32px;
-  height: 32px;
-  border: 3px solid rgba(255, 255, 255, 0.15);
-  border-top-color: #38bdf8;
-  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--color-lines);
+  border-top-color: var(--color-good);
+  border-radius: var(--radius-pill);
   animation: spin 0.8s linear infinite;
 }
 
 @keyframes spin {
+  from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
 
 .camError {
-  color: #f87171;
   font-size: 0.82rem;
-  text-align: center;
-  font-weight: 600;
+  color: var(--color-bad);
 }
 
-.liveBadge {
+/* Privacy Tag: "Recording, not uploaded" */
+.recordingPrivacyBadge {
   position: absolute;
-  top: 10px;
-  right: 10px;
-  background: rgba(239, 68, 68, 0.2);
-  border: 1px solid rgba(239, 68, 68, 0.5);
-  color: #f87171;
-  font-size: 0.62rem;
-  font-weight: 800;
+  top: 8px;
+  left: 8px;
+  background-color: rgba(15, 22, 36, 0.85);
+  color: #ffffff;
+  border: 1px solid var(--color-lines);
+  font-size: 0.72rem;
+  font-weight: 500;
   padding: 0.2rem 0.55rem;
-  border-radius: 4px;
-  letter-spacing: 0.08em;
-  font-family: var(--font-mono);
-  box-shadow: 0 0 10px rgba(239, 68, 68, 0.3);
-  z-index: 4;
-  animation: pulse 1.6s infinite;
+  border-radius: var(--radius-pill);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  z-index: 6;
+  text-transform: none;
 }
 
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
+.recDot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background-color: var(--color-bad);
 }
 
 .emotionBar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.55rem 0.85rem;
-  background: rgba(10, 14, 24, 0.7);
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 0.45rem 0.85rem;
+  background-color: var(--color-surface);
+  border-top: 1px solid var(--color-lines);
+  font-size: 0.78rem;
 }
 
 .emotionLabel {
-  font-size: 0.65rem;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-weight: 700;
-  font-family: var(--font-mono);
+  color: var(--color-muted);
 }
 
 .emotionValue {
-  font-size: 0.78rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-family: var(--font-mono);
-  padding: 0.15rem 0.55rem;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-weight: 600;
+  text-transform: capitalize;
 }
